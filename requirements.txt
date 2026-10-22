@@ -1,0 +1,20 @@
+# Shared Python deps (Python 3.11). Install: pip install -r requirements.txt
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6,<3
+paho-mqtt>=2.0,<3
+openai>=1.30
+httpx>=0.27
+python-dotenv>=1.0
+numpy>=1.26
+
+# Act (Navika)
+python-telegram-bot>=21,<22
+tavily-python>=0.3
+pyserial>=3.5
+
+# Dev
+pytest>=8
+
+# Sense (Shirali) needs torch, torchvision, lwcc, opencv-python. Those are heavy and lwcc
+# may pin an old torch, so keep them in sense/requirements.txt / a separate venv (spec 9.5).

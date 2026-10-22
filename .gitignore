@@ -1,0 +1,41 @@
+# Secrets - never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Raw crowd video and model weights - never commit
+data/footage/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.pth
+*.pt
+*.onnx
+*.safetensors
+*.ckpt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Arduino build output
+build/
