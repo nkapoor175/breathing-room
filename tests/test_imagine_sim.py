@@ -61,3 +61,40 @@ def test_unknown_zone_is_rejected():
             initial_counts={"UNKNOWN": 10},
             arrival_rates_per_min={},
         )
+
+
+
+def test_closed_gate_stops_internal_movement():
+    venue = load_venue()
+    assumptions = load_assumptions()
+
+    # Find the link between the entrance and corridor.
+    link = next(link for link in venue.links if link.id == "G2")
+    link.state = "closed"
+
+    forecast = simulate(
+        venue,
+        initial_counts={"A": 100, "B": 0, "C": 0, "D": 0},
+        arrival_rates_per_min={"A": 0, "B": 0, "C": 0, "D": 0},
+        assumptions=assumptions,
+        seed=42,
+    )
+
+    zone_b = next(zone for zone in forecast.zones if zone.zone == "B")
+    assert zone_b.p50_density == 0
+
+
+def test_empty_venue_stays_empty_without_arrivals():
+    venue = load_venue()
+
+    forecast = simulate(
+        venue,
+        initial_counts={"A": 0, "B": 0, "C": 0, "D": 0},
+        arrival_rates_per_min={"A": 0, "B": 0, "C": 0, "D": 0},
+        seed=42,
+    )
+
+    for zone in forecast.zones:
+        assert zone.p50_density == 0
+        assert zone.p90_density == 0
+        assert zone.p_danger == 0
