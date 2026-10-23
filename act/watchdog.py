@@ -188,11 +188,14 @@ def lightning_ask(on_cost) -> Ask:
     return ask
 
 
-def main(on_trigger: Optional[Callable[[Trigger], None]] = None):
+def main(on_trigger: Optional[Callable[[Trigger, Watchdog, object], None]] = None,
+         client_id: str = "act-watchdog"):
+    """Run the watchdog loop. on_trigger(trigger, watchdog, mqtt_client) is how the
+    Planner plugs in (see act/run_act.py); it runs on this loop, so keep it quick."""
     from common.bus import make_client, publish
 
     inbox: queue.Queue = queue.Queue()
-    mq = make_client("act-watchdog")
+    mq = make_client(client_id)
     mq.on_connect = lambda c, u, f, rc, p: [c.subscribe(t) for t in
                                             ("br/forecast", "br/report", "br/zone_state", "br/plan")]
     mq.on_message = lambda c, u, m: inbox.put((m.topic, m.payload))
@@ -223,7 +226,7 @@ def main(on_trigger: Optional[Callable[[Trigger], None]] = None):
             publish(mq, "br/status", {"t": trig.t, "source": "watchdog", "text": trig.summary,
                                       "urgency": trig.urgency, "reasons": trig.reasons})
             if on_trigger:
-                on_trigger(trig)                    # the Planner plugs in here (A03)
+                on_trigger(trig, dog, mq)           # the Planner plugs in here (A03)
 
 
 if __name__ == "__main__":

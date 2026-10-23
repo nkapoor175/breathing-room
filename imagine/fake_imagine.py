@@ -2,13 +2,14 @@
 
 - Publishes a Forecast on br/forecast every 30 s: zone B's p_danger climbs 0.1 -> 0.7
   over 5 minutes, then loops.
-- Serves a fake Imagine API on port 8002: GET /forecast/latest, POST /score (random
-  improvement over baseline), POST /score/baseline.
+- Serves a fake Imagine API on port 8002: GET /venue/{id} (data/demo-venue.json),
+  GET /forecast/latest, POST /score (random improvement over baseline), POST /score/baseline.
 
 Run:  uvicorn imagine.fake_imagine:app --port 8002
 """
-import asyncio, random, time
+import asyncio, json, random, time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 
@@ -56,6 +57,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Fake Imagine API", lifespan=lifespan)
+
+
+@app.get("/venue/{venue_id}")
+def venue(venue_id: str):
+    return json.loads((Path(__file__).resolve().parents[1] / "data" / "demo-venue.json").read_text(encoding="utf-8"))
 
 
 @app.get("/forecast/latest")
