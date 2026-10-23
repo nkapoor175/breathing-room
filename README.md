@@ -17,6 +17,8 @@ pip install -r requirements.txt
 copy .env.example .env          # then fill in your own keys - never commit .env
 ```
 
+MQTT broker: **EMQX Cloud Serverless** (free tier, TLS on 8883, $0 spend limit). The spec says HiveMQ Cloud, but HiveMQ no longer offers a free hosted tier; `common/bus.py` works unchanged. Each slice has its own broker user (`sense`, `imagine`, `act`); ask Navika for yours.
+
 Confirm the Nemotron model IDs on Token Factory:
 
 ```bash
