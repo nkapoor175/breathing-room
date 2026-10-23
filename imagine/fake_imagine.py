@@ -87,6 +87,7 @@ def make_forecast(
     *,
     seed: int = 42,
     hold_inflow_min: dict[str, int] | None = None,
+    announce_zones: list[str] | None = None,
 ) -> Forecast:
 
     """Generate a real forecast from the Monte Carlo simulator."""
@@ -101,6 +102,7 @@ def make_forecast(
         assumptions,
         seed=seed,
         hold_inflow_min=hold_inflow_min,
+        announce_zones=announce_zones,
     )
 
 
@@ -168,6 +170,29 @@ def get_hold_durations(plan: Plan) -> dict[str, int]:
         )
 
     return durations
+
+
+def get_announcement_zones(plan: Plan) -> list[str]:
+    """Return the unique zones targeted by announce actions."""
+    known_zones = {zone.id for zone in venue.zones}    
+    zones = set()
+
+    for action in plan.actions:
+        if action.type != "announce":
+            continue
+
+        # Announcement actions target PA zones.
+        if not action.zone:
+            raise ValueError("announce action must specify a zone")
+
+        if action.zone not in known_zones:
+            raise ValueError(
+                f"Unknown zone for announce action: {action.zone}"
+            )
+
+        zones.add(action.zone)
+
+    return sorted(zones)
 
 
 async def forecast_loop():
@@ -249,12 +274,14 @@ def score(body: dict):
         plan = Plan.model_validate(plan_data)
         planned_venue = apply_plan_to_venue(plan)
         hold_durations = get_hold_durations(plan)
+        announce_zones = get_announcement_zones(plan)
 
         forecast = make_forecast(
             active_venue=planned_venue,
             initial_counts=current_initial_counts(),
             seed=42,
             hold_inflow_min=hold_durations,
+            announce_zones=announce_zones,
         )
     except (ValidationError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -102,3 +102,74 @@ def test_score_passes_hold_inflow_to_simulator(monkeypatch):
 
     assert response.status_code == 200
     assert captured["hold_inflow_min"] == {"A": 5}
+
+
+def test_score_passes_announcement_zone_to_simulator(monkeypatch):
+    from fastapi.testclient import TestClient
+    from imagine import fake_imagine
+    from imagine.sim import simulate
+
+    captured = {}
+
+    def fake_make_forecast(**kwargs):
+        captured.update(kwargs)
+        return simulate(
+            kwargs.get("active_venue") or fake_imagine.venue,
+            kwargs.get("initial_counts") or {
+                "A": 0, "B": 0, "C": 0, "D": 0
+            },
+            {"A": 0, "B": 0, "C": 0, "D": 0},
+            fake_imagine.assumptions,
+            seed=42,
+            hold_inflow_min=kwargs.get("hold_inflow_min"),
+            announce_zones=kwargs.get("announce_zones"),
+        )
+
+    monkeypatch.setattr(
+        fake_imagine, "make_forecast", fake_make_forecast
+    )
+
+    plan = {
+        "plan_id": "announce-main-entrance",
+        "strategy": "Announce at the main entrance",
+        "actions": [
+            {
+                "type": "announce",
+                "zone": "A",
+                "langs": ["en"],
+                "text": "Please keep moving and avoid crowding.",
+            }
+        ],
+        "why": "Reduce crowd pressure at the main entrance.",
+    }
+
+    with TestClient(fake_imagine.app) as client:
+        response = client.post("/score", json={"plan": plan})
+
+    assert response.status_code == 200
+    assert captured["announce_zones"] == ["A"]
+
+
+def test_score_rejects_announcement_for_unknown_zone():
+    from fastapi.testclient import TestClient
+    from imagine import fake_imagine
+
+    plan = {
+        "plan_id": "announce-unknown-zone",
+        "strategy": "Announce in an unknown zone",
+        "actions": [
+            {
+                "type": "announce",
+                "zone": "UNKNOWN",
+                "langs": ["en"],
+                "text": "Please keep moving.",
+            }
+        ],
+        "why": "Test invalid zone handling.",
+    }
+
+    with TestClient(fake_imagine.app) as client:
+        response = client.post("/score", json={"plan": plan})
+
+    assert response.status_code == 400
+    assert "Unknown zone" in response.json()["detail"]

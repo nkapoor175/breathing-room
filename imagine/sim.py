@@ -83,6 +83,7 @@ def simulate(
     *,
     seed: int = 42,
     hold_inflow_min: dict[str, int] | None = None,
+    announce_zones: list[str] | None = None,
 ) -> Forecast:
 
     """Simulate Monte Carlo futures from explicit counts and arrival rates.
@@ -108,7 +109,13 @@ def simulate(
     if any(not np.isfinite(v) or v < 0 for v in arrival_rates_per_min.values()):
         raise ValueError("Arrival rates must be finite and non-negative")
     holds = hold_inflow_min or {}
+    announcement_zones = set(announce_zones or [])
 
+    if announcement_zones - known_zones:
+        raise ValueError(
+            "Unknown announcement zones: "
+            f"{sorted(announcement_zones - known_zones)}"
+        )
     if set(holds) - known_zones:
         raise ValueError(
             f"Unknown zones in hold_inflow_min: {sorted(set(holds) - known_zones)}"
@@ -178,8 +185,23 @@ def simulate(
 
     for step in range(steps):
         # All demands and supplies use the same snapshot.
+        
         density = counts / areas
         speed = v_free * np.maximum(0.0, 1.0 - density / rho_jam)
+
+        # Announcements can temporarily increase movement speed after a delay.
+        announcement_delay_steps = int(
+            float(cfg["announce_delay_min"]) * 60 / dt_s
+        )
+        announcement_boost = float(cfg["announce_outflow_boost_per_min"])
+
+        if announcement_zones and step >= announcement_delay_steps:
+            for zone_id in announcement_zones:
+                idx = zone_index[zone_id]
+                speed[:, idx] *= 1.0 + announcement_boost
+
+        # Keep speed within the configured free-flow speed.
+        speed = np.minimum(speed, v_free)
         delta = np.zeros_like(counts)
 
         # Desired internal link flows (people per step).
@@ -245,7 +267,21 @@ def simulate(
             if step < hold_steps:
                 continue
 
-            arrivals = rng.poisson(rate_per_min * dt_s / 60.0 * multipliers)
+            effective_rate = rate_per_min
+
+            announcement_delay_steps = int(
+                float(cfg["announce_delay_min"]) * 60 / dt_s
+            )
+
+            if (
+                zone_id in announcement_zones
+                and step >= announcement_delay_steps
+            ):
+                effective_rate *= 1.0 - float(cfg["announce_arrival_cut"])
+
+            arrivals = rng.poisson(
+                effective_rate * dt_s / 60.0 * multipliers
+            )
             room = np.maximum(0.0, max_counts[zone_idx] - counts[:, zone_idx])
             counts[:, zone_idx] += np.minimum(arrivals, room)
 

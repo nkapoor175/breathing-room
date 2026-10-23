@@ -200,3 +200,58 @@ def test_hold_inflow_reduces_admitted_arrivals():
     held_a = next(z for z in held.zones if z.zone == "A")
 
     assert held_a.p50_density < normal_a.p50_density
+
+
+
+def test_announcement_reduces_arrivals_after_delay():
+    venue = load_venue()
+    assumptions = load_assumptions()
+
+    # Disable movement to isolate arrivals into zone A.
+    for link in venue.links:
+        if link.from_zone != "outside":
+            link.state = "closed"
+
+    common = {
+        "initial_counts": {"A": 0, "B": 0, "C": 0, "D": 0},
+        "arrival_rates_per_min": {"A": 60},
+        "assumptions": assumptions,
+        "seed": 42,
+    }
+
+    normal = simulate(venue, **common)
+    announced = simulate(venue, **common, announce_zones=["A"])
+
+    normal_a = next(z for z in normal.zones if z.zone == "A")
+    announced_a = next(z for z in announced.zones if z.zone == "A")
+
+    assert announced_a.p50_density < normal_a.p50_density
+
+
+def test_announcement_increases_outflow_after_delay():
+    venue = load_venue()
+    assumptions = load_assumptions()
+
+    # Use a short horizon so zone A cannot drain completely.
+    assumptions["horizon_min"] = 2
+
+    # Disable entry arrivals for this controlled movement test.
+    for link in venue.links:
+        if link.from_zone == "outside":
+            link.state = "closed"
+
+    common = {
+        "initial_counts": {"A": 100, "B": 0, "C": 0, "D": 0},
+        "arrival_rates_per_min": {},
+        "assumptions": assumptions,
+        "seed": 42,
+    }
+
+    normal = simulate(venue, **common)
+    announced = simulate(venue, **common, announce_zones=["A"])
+
+    normal_a = next(z for z in normal.zones if z.zone == "A")
+    announced_a = next(z for z in announced.zones if z.zone == "A")
+
+    assert normal_a.p50_density > 0
+    assert announced_a.p50_density < normal_a.p50_density
