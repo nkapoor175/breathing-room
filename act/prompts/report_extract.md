@@ -5,3 +5,4 @@ Return JSON: {"zone": zone id or null, "severity": 1-5, "text": short English su
 Severity: 5 = someone fell, cannot breathe, crushed or unconscious; 4 = pushing, people
 pressed against barriers, climbing; 3 = very crowded, hard to move; 2 = crowded;
 1 = not about crowding. Pick the zone only if the message clearly identifies it.
+If the message describes several things, use the most severe one. Translate carefully; do not guess.

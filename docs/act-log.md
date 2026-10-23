@@ -11,7 +11,7 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 | A01 | `common/llm.py` working, model IDs confirmed, `fake_act.py` | ✅ Software done Oct 23 · ⏳ gateway MAC |
 | A02 | Watchdog | ✅ Done Oct 23 (PR `act/watchdog`) |
 | A03 | Planner + executor skeleton | ✅ Done Oct 23 (PR `act/planner`) |
-| A04 | Report fusion | Oct 24 |
+| A04 | Report fusion | ✅ Done Oct 23 (PR `act/reports`) |
 | A05 | Telegram officer bot | Oct 25 |
 | A06 | Announcements (en/ta/hi) | Oct 25 |
 | A07 | Tavily turnout estimator | Oct 26 |
@@ -44,7 +44,12 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
   - `act/run_act.py`: one process, Watchdog → Planner → Executor. Replans run on a worker thread so a slow Ultra call doesn't block the watchdog.
   - `data/demo-venue.json` (zones A–D, 6 links, 2 entries, 12 officers) as a placeholder venue; fake Imagine now serves it on `GET /venue/{id}`.
   - 27 new tests (45 total pass).
+  - PR #1 (Watchdog) merged. PR #2 (Planner) open.
   - **Live test with real Ultra** (fake Imagine/Sense, real broker): zone B crossed 0.3 → watchdog fired → Ultra returned 3 plans in 10.8 s ($0.0125) → 4 plans scored → **plan published 11.3 s after the trigger** (target: under 60 s). Winner P3 "Reinforce Zone B with officers": move 2 officers C → B + announce "Use both exits". Safe in 96% of futures vs 62% doing nothing (fake scores). Ultra's P1 had a hold_inflow with no zone and no minutes, and `validate_plan` repaired it. Executor messages (officer statuses, gate-3 stop, announcement) verified over the broker.
+- **Reasoning on/off test (Lightning).** Same Tamil report, 4 settings: default = **44 s, hit the 8,192-token limit, returned nothing**; `chat_template_kwargs.enable_thinking=False` = **0.4 s**, valid JSON; `reasoning_effort=low` and `/no_think` in the prompt = 22–25 s and badly mistranslated the Tamil. → added `NO_THINK` + optional `extra_body` to `common/llm.py`; Watchdog now uses it: **summary in ~1 s instead of 10–12 s** (51 output tokens instead of ~2,600).
+- **Model comparison for report extraction** (6 messages: 2 Tamil, 2 Hindi, 2 English, reasoning off): Lightning 5/6 (put a Tamil "stage front" message in the overflow ground), **Super 6/6, 2.0 s avg**, Ultra 5/6.
+- **A04 report fusion** (`act/reports.py`): `br/report_raw` → Nemotron Super (reasoning off) → `Report` on `br/report`. `ReportFusion.fuse()` is what the Telegram bot (A05) will call. 12 new tests (57 total pass).
+  - **Live test** through the real path (dashboard form → backend `/operator/report` → `br/report_raw` → fusion → `br/report`): 4/4 published, all correct. English "crushed… a girl fainted" → A/5; Hindi "pushing near gate 2" → B/4; Tamil "very crowded at the stage front" → A/3; a note with no location used the operator's zone pick (D).
 
 ### Decisions
 - **Broker: EMQX Cloud Serverless instead of HiveMQ Cloud.** HiveMQ no longer offers a free hosted tier (only Starter at ~$249/month with a 15-day trial ending before judging, or self-hosted Docker that teammates and judges couldn't reach). EMQX Serverless is free (1M session minutes, 1 GB/month), TLS on 8883, spend limit set to $0, so it can never bill. `common/bus.py` works unchanged. Not a data-contract change; team informed. Host: `g96ca606.ala.asia-southeast1.emqxsl.com` (Asia-Pacific).
@@ -62,13 +67,20 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 - **Rule-based plan id is "RB"** so the dashboard can show when the simple plan beat the AI.
 - **`/score` request's `officers` field = `{"A": 4, "B": 2, ...}`** (officers per zone). The spec left it as `{...}`; Ananya to confirm.
 - **Opening a gate sends arrow "up" (go)**. The spec says "the arrow pointing towards the zone people should use", but the venue has no geometry telling us left vs right yet. Revisit with the real gate sign (A08).
+- **Report extraction uses Nemotron 3 Super, not Lightning** (spec said Lightning). Why: in the 6-message test only Super got every zone and severity right, and it was the fastest (2.0 s). A wrong zone on a "someone fell" report sends officers to the wrong place; Super costs ~$0.0002 per report, so accuracy wins. That fits the spec's own routing rule ("the cheapest model that does it well"). `REPORT_MODEL=lightning` switches back. Lightning stays on the watchdog summary, where it's accurate.
+- **Reasoning off for the watchdog and report extraction; on for the Ultra planner.** Short extraction/summary jobs don't need it and it made Lightning unusably slow; planning is the one job where thinking helps, and Ultra's 10.8 s fits the budget.
+- **`common/llm.py` change is backward compatible**: new optional `extra_body` (default `None`) + a `NO_THINK` constant. Existing calls (Ananya's VL) behave exactly as before. Team told in the PR.
+- **A report is never dropped.** If the model call fails, it's published anyway with a keyword severity (English, Hindi and Tamil words for fell / fainted / can't breathe → 5; push / climb / barricade → 4; otherwise 3 so a human looks) and the original text.
+- **A zone the operator picks on the dashboard form overrides the model's guess**; a zone id the model invents is discarded.
+- **Report prompt got one extra rule**: "if several things are described, use the most severe one". The first Tamil test said "pushing… someone fell" and came back as severity 3.
+- **Watchdog context key renamed `densities_ppm2` → `density_people_per_m2`**: Lightning was copying "ppm" into the summary for officers.
 - **Context is snapshotted on the watchdog loop** at trigger time and handed to the worker thread, so the planner never reads data the loop is changing. A trigger during a running replan queues exactly one follow-up replan.
 
 ### Observations
 - Lightning used ~600 output tokens for a 2-sentence answer, so it probably reasons before replying. Still cheap; watch latency in the Watchdog.
 - Ultra was faster than expected (1.5 s on a short prompt). Real planning calls will be ~10k tokens in, so expect longer.
 - Lightning took **12 s** for the watchdog summary in the live test (vs 3 s in the morning test). It counts toward the 60 s replan target. If it stays slow: start the Planner in parallel with the summary instead of after it.
-- In the planner live test Lightning used **2,622 output tokens for a 2-sentence summary** (10 s). That is almost all hidden reasoning. TODO: check the Lightning model card on Token Factory for a way to turn reasoning off for the watchdog (spec 7.6 mentions this).
+- In the planner live test Lightning used **2,622 output tokens for a 2-sentence summary** (10 s), almost all hidden reasoning. **Fixed** with `NO_THINK` (see above).
 - Ultra sometimes omits fields (`zone`, `minutes`) in actions; the validator catches it. Ultra also sent `langs: ["en"]` only; A06 translation will fill Tamil and Hindi regardless.
 
 ### Blocked / waiting
@@ -77,5 +89,4 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 
 ### Next
 - Ask Ananya to confirm the `officers` shape in `POST /score` and to replace `data/demo-venue.json` with the real venue.
-- Look into turning Lightning's reasoning off for the watchdog summary.
-- A04 report fusion (Oct 24), then A05 Telegram bot and A06 announcements (Oct 25).
+- A05 Telegram officer bot and A06 announcements (Oct 25). A06 translation should also use `NO_THINK`; have a native speaker check Tamil and Hindi lines.

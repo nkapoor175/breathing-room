@@ -171,7 +171,7 @@ class Watchdog:
         p = self.active_plan
         return {
             "forecast": [z.model_dump() for z in self.forecast.zones] if self.forecast else [],
-            "densities_ppm2": {z: s.density_ppm2 for z, s in sorted(self.states.items())},
+            "density_people_per_m2": {z: s.density_ppm2 for z, s in sorted(self.states.items())},
             "recent_reports": [r.model_dump(exclude={"node"}) for _, r in self.reports],
             "active_plan": {"strategy": p.plan.strategy, "why": p.plan.why} if p else None,
             "rules_fired": rule_triggers or [],
@@ -180,11 +180,12 @@ class Watchdog:
 
 # ---------- live process ----------
 def lightning_ask(on_cost) -> Ask:
-    from common.llm import call_json
+    from common.llm import NO_THINK, call_json
     system = (Path(__file__).parent / "prompts" / "watchdog.md").read_text(encoding="utf-8")
 
     def ask(ctx: dict) -> WatchdogVerdict:
-        return call_json("lightning", "watchdog", system, json.dumps(ctx), WatchdogVerdict, on_cost=on_cost)
+        return call_json("lightning", "watchdog", system, json.dumps(ctx), WatchdogVerdict,
+                         on_cost=on_cost, extra_body=NO_THINK)
     return ask
 
 
