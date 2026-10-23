@@ -1,0 +1,14 @@
+[
+  {"officer_id": "O1",  "name": "Officer 1",  "zone": "A", "telegram_chat_id": null},
+  {"officer_id": "O2",  "name": "Officer 2",  "zone": "A", "telegram_chat_id": null},
+  {"officer_id": "O3",  "name": "Officer 3",  "zone": "A", "telegram_chat_id": null},
+  {"officer_id": "O4",  "name": "Officer 4",  "zone": "A", "telegram_chat_id": null},
+  {"officer_id": "O5",  "name": "Officer 5",  "zone": "B", "telegram_chat_id": null},
+  {"officer_id": "O6",  "name": "Officer 6",  "zone": "B", "telegram_chat_id": null},
+  {"officer_id": "O7",  "name": "Officer 7",  "zone": "C", "telegram_chat_id": null},
+  {"officer_id": "O8",  "name": "Officer 8",  "zone": "C", "telegram_chat_id": null},
+  {"officer_id": "O9",  "name": "Officer 9",  "zone": "C", "telegram_chat_id": null},
+  {"officer_id": "O10", "name": "Officer 10", "zone": "D", "telegram_chat_id": null},
+  {"officer_id": "O11", "name": "Officer 11", "zone": "D", "telegram_chat_id": null},
+  {"officer_id": "O12", "name": "Officer 12", "zone": "D", "telegram_chat_id": null}
+]

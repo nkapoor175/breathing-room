@@ -1,0 +1,24 @@
+{
+  "venue_id": "vit-main-ground",
+  "name": "Demo venue (placeholder until Ananya's vit-main-ground.json)",
+  "zones": [
+    {"id": "A", "name": "Stage front", "area_m2": 400, "polygon_px": [], "polygon_map": []},
+    {"id": "B", "name": "Gate 2 approach", "area_m2": 150, "polygon_px": [], "polygon_map": []},
+    {"id": "C", "name": "Overflow ground", "area_m2": 900, "polygon_px": [], "polygon_map": []},
+    {"id": "D", "name": "Main entrance plaza", "area_m2": 300, "polygon_px": [], "polygon_map": []}
+  ],
+  "links": [
+    {"id": "L1", "from": "D", "to": "outside", "width_m": 8, "kind": "opening", "state": "open"},
+    {"id": "G1", "from": "D", "to": "A", "width_m": 4, "kind": "gate", "state": "open"},
+    {"id": "G2", "from": "B", "to": "outside", "width_m": 3, "kind": "gate", "state": "open"},
+    {"id": "G3", "from": "B", "to": "A", "width_m": 3, "kind": "gate", "state": "open"},
+    {"id": "G4", "from": "A", "to": "C", "width_m": 6, "kind": "gate", "state": "closed"},
+    {"id": "G5", "from": "C", "to": "outside", "width_m": 4, "kind": "gate", "state": "open"}
+  ],
+  "entries": [
+    {"zone": "D", "name": "Main entrance"},
+    {"zone": "B", "name": "Gate 2"}
+  ],
+  "pa_zones": ["A", "B", "D"],
+  "officers_total": 12
+}
