@@ -139,3 +139,39 @@ def test_density_never_exceeds_physical_maximum():
 
     for zone in forecast.zones:
         assert zone.p90_density <= physical_max
+
+
+def test_closing_gate_changes_movement_between_connected_zones():
+    venue = load_venue()
+    assumptions = load_assumptions()
+
+    counts = {"A": 0, "B": 100, "C": 0, "D": 0}
+    arrivals = {"A": 0, "B": 0, "C": 0, "D": 0}
+
+    open_forecast = simulate(
+        venue,
+        initial_counts=counts,
+        arrival_rates_per_min=arrivals,
+        assumptions=assumptions,
+        seed=42,
+    )
+
+    # Close G3 (B -> C) on a separate venue copy.
+    from common.contracts import Venue
+
+    closed_venue = Venue.model_validate(venue.model_dump(by_alias=True))
+    gate_g3 = next(link for link in closed_venue.links if link.id == "G3")
+    gate_g3.state = "closed"
+
+    closed_forecast = simulate(
+        closed_venue,
+        initial_counts=counts,
+        arrival_rates_per_min=arrivals,
+        assumptions=assumptions,
+        seed=42,
+    )
+
+    open_c = next(z for z in open_forecast.zones if z.zone == "C")
+    closed_c = next(z for z in closed_forecast.zones if z.zone == "C")
+
+    assert open_c.p50_density > closed_c.p50_density
