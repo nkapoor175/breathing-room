@@ -98,3 +98,44 @@ def test_empty_venue_stays_empty_without_arrivals():
         assert zone.p50_density == 0
         assert zone.p90_density == 0
         assert zone.p_danger == 0
+
+
+
+def test_open_exit_reduces_crowd_count():
+    venue = load_venue()
+    assumptions = load_assumptions()
+
+    # Start with people in zone D, which connects to the outside
+    # through exit G5.
+    forecast = simulate(
+        venue,
+        initial_counts={"A": 0, "B": 0, "C": 0, "D": 80},
+        arrival_rates_per_min={"A": 0, "B": 0, "C": 0, "D": 0},
+        assumptions=assumptions,
+        seed=42,
+    )
+
+    zone_d = next(zone for zone in forecast.zones if zone.zone == "D")
+
+    # With an open exit and no arrivals, the final median density
+    # should be below the starting density of 80 / 100 = 0.8.
+    assert zone_d.p50_density < 0.8
+
+
+
+def test_density_never_exceeds_physical_maximum():
+    venue = load_venue()
+    assumptions = load_assumptions()
+
+    forecast = simulate(
+        venue,
+        initial_counts={"A": 100, "B": 0, "C": 0, "D": 0},
+        arrival_rates_per_min={"A": 500, "B": 500, "C": 500, "D": 500},
+        assumptions=assumptions,
+        seed=42,
+    )
+
+    physical_max = assumptions["rho_physical_max"]
+
+    for zone in forecast.zones:
+        assert zone.p90_density <= physical_max
