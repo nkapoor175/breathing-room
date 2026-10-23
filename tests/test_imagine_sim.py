@@ -175,3 +175,28 @@ def test_closing_gate_changes_movement_between_connected_zones():
     closed_c = next(z for z in closed_forecast.zones if z.zone == "C")
 
     assert open_c.p50_density > closed_c.p50_density
+
+
+def test_hold_inflow_reduces_admitted_arrivals():
+    venue = load_venue()
+    assumptions = load_assumptions()
+
+    # Disable movement so the test isolates entrance arrivals.
+    for link in venue.links:
+        if link.from_zone != "outside":
+            link.state = "closed"
+
+    common = {
+        "initial_counts": {"A": 0, "B": 0, "C": 0, "D": 0},
+        "arrival_rates_per_min": {"A": 60},
+        "assumptions": assumptions,
+        "seed": 42,
+    }
+
+    normal = simulate(venue, **common)
+    held = simulate(venue, **common, hold_inflow_min={"A": 5})
+
+    normal_a = next(z for z in normal.zones if z.zone == "A")
+    held_a = next(z for z in held.zones if z.zone == "A")
+
+    assert held_a.p50_density < normal_a.p50_density

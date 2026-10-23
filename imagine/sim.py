@@ -74,6 +74,7 @@ def load_venue(path: str | Path = DEFAULT_VENUE) -> Venue:
     return venue
 
 
+
 def simulate(
     venue: Venue,
     initial_counts: dict[str, int],
@@ -81,7 +82,9 @@ def simulate(
     assumptions: dict[str, Any] | None = None,
     *,
     seed: int = 42,
+    hold_inflow_min: dict[str, int] | None = None,
 ) -> Forecast:
+
     """Simulate Monte Carlo futures from explicit counts and arrival rates.
 
     Arrival rates are mean people/minute by entry zone. Links are directed.
@@ -104,7 +107,18 @@ def simulate(
         raise ValueError("Initial counts must be non-negative integers")
     if any(not np.isfinite(v) or v < 0 for v in arrival_rates_per_min.values()):
         raise ValueError("Arrival rates must be finite and non-negative")
+    holds = hold_inflow_min or {}
 
+    if set(holds) - known_zones:
+        raise ValueError(
+            f"Unknown zones in hold_inflow_min: {sorted(set(holds) - known_zones)}"
+        )
+
+    if any(
+        not isinstance(v, int) or isinstance(v, bool) or v < 0
+        for v in holds.values()
+    ):
+        raise ValueError("Hold durations must be non-negative integers")
     areas = np.array([z.area_m2 for z in venue.zones], dtype=float)
     initial = np.array([initial_counts.get(z, 0) for z in zone_ids], dtype=float)
 
@@ -225,6 +239,12 @@ def simulate(
         # are not silently discarded: they are admitted only up to available
         # physical room. (A future version can track the outside queue.)
         for zone_idx, rate_per_min in arrival_items:
+            zone_id = zone_ids[zone_idx]
+            hold_steps = int(holds.get(zone_id, 0) * 60 / dt_s)
+
+            if step < hold_steps:
+                continue
+
             arrivals = rng.poisson(rate_per_min * dt_s / 60.0 * multipliers)
             room = np.maximum(0.0, max_counts[zone_idx] - counts[:, zone_idx])
             counts[:, zone_idx] += np.minimum(arrivals, room)

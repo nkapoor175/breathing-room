@@ -79,13 +79,16 @@ def current_initial_counts() -> dict[str, int]:
     }
 
 
+
 def make_forecast(
     active_venue: Venue | None = None,
     initial_counts: dict[str, int] | None = None,
     arrival_rates: dict[str, float] | None = None,
     *,
     seed: int = 42,
+    hold_inflow_min: dict[str, int] | None = None,
 ) -> Forecast:
+
     """Generate a real forecast from the Monte Carlo simulator."""
     selected_venue = active_venue or venue
     counts = initial_counts if initial_counts is not None else current_initial_counts()
@@ -97,6 +100,7 @@ def make_forecast(
         rates,
         assumptions,
         seed=seed,
+        hold_inflow_min=hold_inflow_min,
     )
 
 
@@ -135,6 +139,35 @@ def apply_plan_to_venue(plan: Plan) -> Venue:
         link.state = action.state
 
     return planned_venue
+
+
+def get_hold_durations(plan: Plan) -> dict[str, int]:
+    """Map hold_inflow actions to their destination zones."""
+    durations: dict[str, int] = {}
+
+    entries = {entry.name: entry.zone for entry in venue.entries}
+
+    for action in plan.actions:
+        if action.type != "hold_inflow":
+            continue
+
+        if not action.entry or action.entry not in entries:
+            raise ValueError(
+                f"Unknown entry for hold_inflow action: {action.entry}"
+            )
+
+        if action.minutes is None or action.minutes < 0:
+            raise ValueError(
+                "hold_inflow action must specify non-negative minutes"
+            )
+
+        zone_id = entries[action.entry]
+        durations[zone_id] = max(
+            durations.get(zone_id, 0),
+            action.minutes,
+        )
+
+    return durations
 
 
 async def forecast_loop():
@@ -208,16 +241,20 @@ def score_baseline(body: dict):
     return score_forecast("baseline", forecast)
 
 
+
 @app.post("/score")
 def score(body: dict):
     try:
         plan_data = body.get("plan", body)
         plan = Plan.model_validate(plan_data)
         planned_venue = apply_plan_to_venue(plan)
+        hold_durations = get_hold_durations(plan)
+
         forecast = make_forecast(
             active_venue=planned_venue,
             initial_counts=current_initial_counts(),
             seed=42,
+            hold_inflow_min=hold_durations,
         )
     except (ValidationError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
