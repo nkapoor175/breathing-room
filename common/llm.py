@@ -16,13 +16,18 @@ MODELS = {
 # USD per 1M tokens (input, output), from the Token Factory catalog. Re-check before the demo.
 PRICES = {"ultra": (1.00, 3.00), "lightning": (0.06, 0.24), "vl": (0.30, 0.90), "super": (0.30, 0.90)}
 
+# Pass as extra_body= to turn off hidden reasoning. Tested Oct 23: Lightning with reasoning
+# on took up to 44 s and could hit the token limit with no answer; off, it answers in ~2 s.
+NO_THINK = {"chat_template_kwargs": {"enable_thinking": False}}
+
 def _now():
     return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5, minutes=30))).isoformat()
 
 def call_json(role: str, purpose: str, system: str, user: str, schema: type[BaseModel],
               images: list[str] | None = None, retries: int = 1, temperature: float = 0.2,
-              on_cost=None) -> BaseModel:
-    """Call a Nemotron model and return a validated Pydantic object."""
+              on_cost=None, extra_body: dict | None = None) -> BaseModel:
+    """Call a Nemotron model and return a validated Pydantic object.
+    extra_body: extra request fields, e.g. NO_THINK."""
     content = user if not images else (
         [{"type": "text", "text": user}] +
         [{"type": "image_url", "image_url": {"url": u}} for u in images])
@@ -34,7 +39,8 @@ def call_json(role: str, purpose: str, system: str, user: str, schema: type[Base
     for _ in range(retries + 1):
         t0 = time.time()
         resp = client.chat.completions.create(model=MODELS[role], messages=messages,
-                                              temperature=temperature, response_format=rf)
+                                              temperature=temperature, response_format=rf,
+                                              extra_body=extra_body)
         text = resp.choices[0].message.content or ""
         u = resp.usage
         usd = u.prompt_tokens / 1e6 * PRICES[role][0] + u.completion_tokens / 1e6 * PRICES[role][1]
