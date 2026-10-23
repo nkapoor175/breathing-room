@@ -1,0 +1,89 @@
+
+{
+  "venue_id": "demo-venue-01",
+  "name": "Breathing Room Demo Venue",
+  "zones": [
+    {
+      "id": "A",
+      "name": "Main Entrance",
+      "area_m2": 120.0,
+      "polygon_px": [[0, 0], [200, 0], [200, 120], [0, 120]],
+      "polygon_map": [[0, 0], [200, 0], [200, 120], [0, 120]],
+      "capacity_note": "Entry queue and arrival area"
+    },
+    {
+      "id": "B",
+      "name": "Main Corridor",
+      "area_m2": 160.0,
+      "polygon_px": [[200, 0], [400, 0], [400, 120], [200, 120]],
+      "polygon_map": [[200, 0], [400, 0], [400, 120], [200, 120]],
+      "capacity_note": "Main pedestrian flow corridor"
+    },
+    {
+      "id": "C",
+      "name": "Stage Front",
+      "area_m2": 180.0,
+      "polygon_px": [[400, 0], [600, 0], [600, 120], [400, 120]],
+      "polygon_map": [[400, 0], [600, 0], [600, 120], [400, 120]],
+      "capacity_note": "Audience gathering area"
+    },
+    {
+      "id": "D",
+      "name": "Side Exit",
+      "area_m2": 100.0,
+      "polygon_px": [[200, 120], [400, 120], [400, 220], [200, 220]],
+      "polygon_map": [[200, 120], [400, 120], [400, 220], [200, 220]],
+      "capacity_note": "Alternative exit route"
+    }
+  ],
+  "links": [
+    {
+      "id": "G1",
+      "from": "outside",
+      "to": "A",
+      "width_m": 3.0,
+      "kind": "gate",
+      "state": "open"
+    },
+    {
+      "id": "G2",
+      "from": "A",
+      "to": "B",
+      "width_m": 2.5,
+      "kind": "opening",
+      "state": "open"
+    },
+    {
+      "id": "G3",
+      "from": "B",
+      "to": "C",
+      "width_m": 2.0,
+      "kind": "gate",
+      "state": "open"
+    },
+    {
+      "id": "G4",
+      "from": "B",
+      "to": "D",
+      "width_m": 2.0,
+      "kind": "corridor",
+      "state": "open"
+    },
+    {
+      "id": "G5",
+      "from": "D",
+      "to": "outside",
+      "width_m": 2.0,
+      "kind": "gate",
+      "state": "open"
+    }
+  ],
+  "entries": [
+    {
+      "zone": "A",
+      "name": "Main Entrance"
+    }
+  ],
+  "pa_zones": ["A", "B", "C", "D"],
+  "officers_total": 6
+}
