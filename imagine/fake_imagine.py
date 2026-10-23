@@ -200,7 +200,11 @@ def forecast_latest():
 
 @app.post("/score/baseline")
 def score_baseline(body: dict):
-    forecast = make_forecast(seed=42)
+    counts = current_initial_counts()
+    forecast = make_forecast(
+        initial_counts=counts,
+        seed=42,
+    )
     return score_forecast("baseline", forecast)
 
 
@@ -212,6 +216,7 @@ def score(body: dict):
         planned_venue = apply_plan_to_venue(plan)
         forecast = make_forecast(
             active_venue=planned_venue,
+            initial_counts=current_initial_counts(),
             seed=42,
         )
     except (ValidationError, ValueError) as exc:
