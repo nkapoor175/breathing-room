@@ -42,3 +42,6 @@ build/
 
 # Telegram sign-ups (chat ids)
 act/telegram_registry.json
+
+# Cached Tavily search results
+act/.cache/
