@@ -144,7 +144,7 @@ function Approvals({ approvals, now }: { approvals: Approval[]; now: number }) {
       })}
       {recent.map((a) => (
         <p key={a.approval_id} className="text-xs text-zinc-500">
-          Gate {a.action.link} {a.action.state}: {a.resolved === "approved" ? `approved by ${a.by}` : a.resolved === "rejected" ? `rejected by ${a.by}` : a.resolved === "replaced" ? "replaced by a newer plan" : "no answer, not changed"}
+          Gate {a.action.link} {a.action.state}: {a.resolved === "approved" ? `approved by ${a.by}` : a.resolved === "rejected" ? `rejected by ${a.by}` : a.resolved === "replaced" ? "replaced by a newer plan" : a.resolved === "withdrawn" ? "withdrawn, not changed" : "no answer, not changed"}
         </p>
       ))}
       {error && open.length > 0 && <p className="text-xs text-red-600">{error}</p>}
@@ -209,13 +209,20 @@ function Announcements() {
   return (
     <Section title={`Announcement · zone ${a.zone}`}>
       <ul className="flex flex-col gap-2">
-        {(Object.keys(LANG) as (keyof typeof LANG)[]).filter((l) => a.texts[l]).map((l) => {
-          const hasVoice = !!voiceFor(LANG[l].voice);
+        {(Object.keys(LANG) as (keyof typeof LANG)[]).map((l) => {
+          // A translation that failed Act's safety check is left out: say so and play English instead.
+          const missing = !a.texts[l];
+          const lang = missing ? "en" : l;
+          const hasVoice = !!voiceFor(LANG[lang].voice);
           return (
             <li key={l} className="flex items-start gap-2 text-sm">
-              <button onClick={() => play(l, a.texts[l])} disabled={!hasVoice} title={hasVoice ? "Play" : "No voice for this language on this computer; read it out"}
+              <button onClick={() => play(lang, a.texts[lang] ?? "")} disabled={!hasVoice || !a.texts[lang]}
+                title={missing ? "Translation not available; plays English" : hasVoice ? "Play" : "No voice for this language on this computer; read it out"}
                 className="mt-0.5 rounded-md border border-zinc-300 px-1.5 text-xs disabled:opacity-40 dark:border-zinc-600">▶</button>
-              <span><span className="text-xs text-zinc-500">{LANG[l].label}</span><br />{a.texts[l]}</span>
+              <span>
+                <span className="text-xs text-zinc-500">{LANG[l].label}</span><br />
+                {missing ? <span className="text-zinc-500">Translation not available; play the English line.</span> : a.texts[l]}
+              </span>
             </li>
           );
         })}

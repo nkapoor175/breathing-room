@@ -17,7 +17,7 @@ const HISTORY_MS = 5 * 60 * 1000;
 type Stamped<T> = T & { receivedAt: number };
 
 export type Approval = Stamped<ApprovalRequest> & {
-  resolved?: "approved" | "rejected" | "replaced";
+  resolved?: "approved" | "rejected" | "replaced" | "withdrawn";
   by?: string;
 };
 
@@ -84,9 +84,20 @@ function reduce(s: BusState, m: Msg): BusState {
     case topic === "br/announce":
       next.announcements = cap([stamp(d as unknown as Announcement), ...s.announcements], 10);
       break;
-    case topic === "br/status":
-      next.statuses = cap([stamp(d as unknown as Status), ...s.statuses], 50);
+    case topic === "br/status": {
+      const st = stamp(d as unknown as Status);
+      next.statuses = cap([st, ...s.statuses], 50);
+      // The executor reports how each approval ended, e.g. "Navika approved: gate G3 closed",
+      // "dashboard rejected closing gate G3; ...", "Approval to closed gate G3 withdrawn (...)".
+      const gate = st.source === "executor" ? st.text.match(/gate (\w+)/)?.[1] : undefined;
+      const outcome = /withdrawn/.test(st.text) ? "withdrawn" : / approved:/.test(st.text) ? "approved" : / rejected /.test(st.text) ? "rejected" : undefined;
+      if (gate && outcome) {
+        const by = outcome === "withdrawn" ? undefined : st.text.split(outcome === "approved" ? " approved:" : " rejected ")[0];
+        next.approvals = Object.fromEntries(Object.entries(s.approvals).map(([id, a]) =>
+          [id, !a.resolved && a.action.link === gate && a.receivedAt <= at ? { ...a, resolved: outcome, by } : a]));
+      }
       break;
+    }
     case topic === "br/cost":
       next.costs = [...s.costs, stamp(d as unknown as CostEvent)].slice(-500);
       break;
