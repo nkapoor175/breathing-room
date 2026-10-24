@@ -16,11 +16,20 @@ def chosen(*actions):
                       baseline_max_p_danger=0.6, candidates_considered=4)
 
 
-def make(travel_s=0.2):
+def make(travel_s=0.2, approve="none", timeout=60, translate=None):
     sent, told = [], []
     ex = Executor(VENUE, Officers(), lambda topic, m: sent.append((topic, m)),
-                  notify=lambda o, text: told.append((o["officer_id"], text)), travel_s=travel_s)
+                  notify=lambda o, text: told.append((o["officer_id"], text)), travel_s=travel_s,
+                  translate=translate, approve=approve, approval_timeout_s=timeout)
     return ex, sent, told
+
+
+def devices(sent):
+    return [(t, m.value) for t, m in sent if t.startswith("br/device/")]
+
+
+def approvals(sent):
+    return [m for t, m in sent if t == "br/approval"]
 
 
 def test_gate_node_names():
@@ -30,7 +39,7 @@ def test_gate_node_names():
 def test_gate_close_and_open():
     ex, sent, _ = make()
     ex.execute(chosen({"type": "gate", "link": "G3", "state": "closed"}, {"type": "gate", "link": "G4", "state": "open"}))
-    assert [(t, m.value) for t, m in sent] == [("br/device/gate-3", "stop"), ("br/device/gate-4", "up")]
+    assert devices(sent) == [("br/device/gate-3", "stop"), ("br/device/gate-4", "up")]
     assert ex.gates["G3"] == "closed" and ex.gates["G4"] == "open"
 
 
@@ -52,3 +61,56 @@ def test_announce_and_hold_inflow():
     (topic, ann), = sent
     assert topic == "br/announce" and ann.texts == {"en": "Please move left."}
     assert {o for o, _ in told} == {"O5", "O6"} and "Pause entry at Gate 2" in told[0][1]
+
+
+# ---------- operator approval for gate closures ----------
+CLOSE_G3 = {"type": "gate", "link": "G3", "state": "closed"}
+
+
+def test_closing_waits_for_approval_opening_does_not():
+    ex, sent, _ = make(approve="close")
+    ex.execute(chosen(CLOSE_G3, {"type": "gate", "link": "G4", "state": "open"}))
+    assert devices(sent) == [("br/device/gate-4", "up")]
+    (req,) = approvals(sent)
+    assert req["action"] == CLOSE_G3 and req["plan_id"] == "P1" and ex.gates["G3"] == "open"
+
+
+def test_approve_closes_gate():
+    ex, sent, _ = make(approve="close")
+    ex.execute(chosen(CLOSE_G3))
+    aid = approvals(sent)[0]["approval_id"]
+    assert ex.decide(aid, True, by="Navika")
+    assert devices(sent) == [("br/device/gate-3", "stop")] and ex.gates["G3"] == "closed"
+    assert not ex.decide(aid, True)                       # can't approve twice
+
+
+def test_reject_leaves_gate():
+    ex, sent, _ = make(approve="close")
+    ex.execute(chosen(CLOSE_G3))
+    assert ex.decide(approvals(sent)[0]["approval_id"], False)
+    assert devices(sent) == [] and ex.gates["G3"] == "open"
+
+
+def test_no_answer_means_no_change():
+    ex, sent, _ = make(approve="close", timeout=0.2)
+    ex.execute(chosen(CLOSE_G3))
+    aid = approvals(sent)[0]["approval_id"]
+    time.sleep(0.5)
+    assert not ex.decide(aid, True)
+    assert devices(sent) == [] and any("withdrawn" in m["text"] for t, m in sent if t == "br/status")
+
+
+def test_newer_plan_cancels_old_request():
+    ex, sent, _ = make(approve="close")
+    ex.execute(chosen(CLOSE_G3))
+    old = approvals(sent)[0]["approval_id"]
+    ex.execute(chosen({"type": "gate", "link": "G2", "state": "closed"}))
+    assert not ex.decide(old, True) and devices(sent) == []
+    assert len(ex.pending) == 1
+
+
+def test_announcement_is_translated():
+    ex, sent, _ = make(translate=lambda en: {"en": en, "ta": "TA", "hi": "HI"})
+    ex.execute(chosen({"type": "announce", "zone": "B", "langs": ["en"], "text": "Please move left."}))
+    (ann,) = [m for t, m in sent if t == "br/announce"]
+    assert ann.texts == {"en": "Please move left.", "ta": "TA", "hi": "HI"}

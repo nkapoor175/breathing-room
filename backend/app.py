@@ -92,3 +92,17 @@ def operator_report(r: OperatorReport):
     msg = {"t": now_iso(), "source": "call_note", "text": r.text, "zone": r.zone}
     publish(mq, "br/report_raw", msg)
     return {"ok": True, "published": msg}
+
+
+class OperatorApproval(BaseModel):
+    approval_id: str
+    approved: bool
+    by: Optional[str] = "dashboard"
+
+
+@app.post("/operator/approve")
+def operator_approve(a: OperatorApproval):
+    """Dashboard Approve / Reject button for a gate closure (br/approval) -> br/approve."""
+    msg = {"t": now_iso(), "approval_id": a.approval_id, "approved": a.approved, "by": a.by}
+    publish(mq, "br/approve", msg)
+    return {"ok": True, "published": msg}
