@@ -19,7 +19,6 @@ For each tool: what we used it for, what worked, what didn't, time from zero to 
 
 - Oct 25: in number extraction from news, Lightning turned vague phrases into exact numbers ("thousands" → 3,000, "tens of thousands" → 30,000). Super did not. We now verify every number against the quote in code.
 - Oct 25: Tamil translation of announcements mixed in Korean characters and flipped left/right; Hindi was fine.
-
 - First test (same prompt): 93 in / 605 out tokens, 3.3 s, $0.00015. Used more output tokens than Ultra for a 2-sentence answer (likely hidden reasoning); still very cheap.
 
 ## Nemotron 3.5 Super VL
