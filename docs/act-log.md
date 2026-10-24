@@ -14,7 +14,7 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 | A04 | Report fusion | ✅ Done Oct 23 (PR `act/reports`) |
 | A05 | Telegram officer bot | ✅ Done Oct 25 (PR `act/telegram`), tested on a real phone |
 | A06 | Announcements (en/ta/hi) | ✅ Done Oct 25 (PR `act/announce-approve`) · ⏳ native-speaker check |
-| A07 | Tavily turnout estimator | Oct 26 |
+| A07 | Tavily turnout estimator | ✅ Done Oct 25 (PR `act/turnout`) |
 | A08 | Gateway, gate sign, serial bridge | Oct 26 |
 | A09 | Act dashboard panel | ✅ Built Oct 25 in a forked session (PR #6) |
 | A10 | Devpost write-up + tool feedback | Oct 29 |
@@ -43,6 +43,15 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 - **A05 Telegram officer bot** (`act/telegram_bot.py`): `/start` → Officer/Volunteer → zone; an officer's phone takes over a simulated officer in that zone. Plans reach the phone with [On my way] [Arrived] buttons; presses publish `OfficerStatus`. Any text from a registered person → report fusion → `br/report` (sender's zone if the model can't tell). `/whoami`. Sign-ups saved in `act/telegram_registry.json` (git-ignored). Runs inside `run_act` on its own thread; `python -m act.telegram_bot` runs it alone. 11 new tests (95 total pass).
   - **Live test on Navika's phone**: signed up as officer in zone C (took over O7, shown as "Navika", not simulated) → instruction "Move to Gate 2 approach (zone B) now" arrived with buttons → On my way → Arrived (zone C → B on the dashboard), ~4 s per press → typed "people pushing near the stage" → Report zone A, severity 4, source telegram.
   - Bug found in the live test and fixed: after "Arrived", the saved sign-up kept the old zone, so a restart (or a report with no clear location) would have used zone C. Arriving now updates the saved zone.
+- **A07 Tavily turnout estimator** (`act/turnout.py`): 3 Tavily searches in a date window → Nemotron Super extracts every crowd number with exact quote, url and kind → code checks each one → low/high/ratio vs declared → warning card on `br/turnout` (new topic). `--before-event` uses only news published before the event date. Results cached in `act/.cache/tavily/` (git-ignored). 18 new tests (111 total pass).
+  - **Demo result, Karur TVK rally (Sep 27, 2025), only news from before the rally, declared 10,000** (the number in TVK's permission letter): ⚠️ "Likely turnout up to 10× the declared crowd: the organizer's recent events drew up to 100,000 vs 10,000 declared." Evidence: New Indian Express, Sep 14, on TVK's Trichy rally two weeks earlier: police "expected a crowd of around 25,000", and "around 1 lakh people … gathered". Same answer in 3 of 3 repeat runs. ~$0.0015 per estimate.
+  - Tavily credits used today: 12 of 1,000 (experiments included); a cached demo re-run costs 0.
+  - How it got there (5 iterations, all on the same question):
+    1. Tavily `topic="news"` returned US/UK stories only (London march, NPR, CNN, MLB) → nothing.
+    2. `topic="general"` + `country="india"` found The Hindu, NDTV, Deccan Herald, New Indian Express. `include_domains` with Indian outlets on `news` was worse: Times of India pages dated *before* the rally contained sidebar headlines from *after* it ("Stampede LIVE updates: 31 killed").
+    3. Lightning turned vague words into exact numbers ("thousands" → 3,000, "tens of thousands" → 30,000, "the scale of the crowd was striking" → 15,000). The new number check caught all four. Super invented none → Super.
+    4. The spec's 2nd query had the date in it and missed the coverage of earlier rallies; dropped the date.
+    5. Super labelled the Trichy numbers as if they were about Karur. Code now decides: a number counts for *this* event only if its article mentions the event's city; otherwise it's `past_event`.
 - **Full-loop regression** with real Ultra: watchdog 0.9 s → Ultra 7.5 s → plan published **8.2 s** after the trigger; announcement went out in en/ta/hi ($0.0014).
 
 ### Decisions
@@ -57,10 +66,17 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 - **A phone takes over an existing simulated officer** in its zone (instead of adding a new one), so the planner's officer counts stay the same whether or not people have signed up. Extra phones beyond a zone's officers are added as new officers.
 - **Only the phone an instruction went to can press its buttons**; anyone else gets "This instruction isn't yours."
 - **Officers and volunteers can both send reports**; a report with no clear zone uses the sender's zone.
+- **Turnout: every number is checked in code** before it reaches the card: the quote must appear in that url's text, and the estimate must be a number the quote states (digits, or N lakh/crore). The model's free-text `note` is never shown as fact.
+- **Turnout: the organizer's earlier events count** (`past_event`) when there's no estimate for this event itself, and the card says "the organizer's recent events drew…". For a first-time venue that's the best signal there is, and it's exactly what was missed at Karur.
+- **Turnout: before-event mode drops "reported" numbers for this event** (nothing can be reported before it happens; such numbers leaked in from later pages).
+- **Turnout uses Super, not Lightning** (spec): Lightning made up numbers from vague words.
+- **Turnout search: `topic="general"` + `country`** (default india, `TURNOUT_COUNTRY` / `--country`), not `news`.
+- **New topic `br/turnout`** (needs team OK, like `br/approval`).
 
 ### Observations
 - **Port clash on Navika's laptop**: the CampusFind AI image-similarity service (another project, `/health` + `/similarity`) was on port 8000, so our backend failed to start there; tested on 8010. Later the same day CampusFind was running on 8001 and 8000 was free again. Before the integration evening, check 8000 is free (or run our backend elsewhere and set `BACKEND_URL` + the dashboard's `NEXT_PUBLIC_BACKEND_URL`).
 - Ultra's P1 again had a `hold_inflow` without zone/minutes; the validator repaired it (same as Oct 23). Could add one line to the planner prompt.
+- **Limits of the turnout estimate to say out loud**: search results from `topic="general"` often have no publish date, so the date window can't fully stop later pages leaking in (mitigated, not solved); one fan-media post ("a venue built for 1.5 lakh+ people") keeps being labelled `declared` (harmless: declared numbers don't affect the ratio, but the card shows it). Using the Karur tragedy as the demo event is sensitive; frame it as "the warning that was available", never as hindsight.
 
 ### Blocked / waiting
 - **Hardware** for A08 tomorrow: 2 ESP32s, LEDs, board package version. Gateway MAC for Shirali still pending.
@@ -70,7 +86,7 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 - Team OK on `br/approval` / `br/approve`.
 
 ### Next
-- Mon Oct 26: A07 Tavily, A08 gateway + gate sign + serial bridge, integration evening (golden-path test).
+- Mon Oct 26: A08 gateway + gate sign + serial bridge (needs hardware), integration evening (golden-path test).
 
 ---
 
