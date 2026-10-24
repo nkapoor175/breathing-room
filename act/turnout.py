@@ -247,12 +247,14 @@ def main():
         from common.bus import make_client, publish
         mq = make_client("act-turnout")
         mq.loop_start()
-        publish(mq, "br/turnout", est)
-        for c in costs:
-            publish(mq, "br/cost", c)
+        # retained: a one-off pre-event card must survive a backend that starts later
+        sent = [publish(mq, "br/turnout", est, retain=True)] + [publish(mq, "br/cost", c) for c in costs]
+        for info in sent:                 # wait until it has really left before disconnecting
+            info.wait_for_publish(timeout=10)
+        ok = all(info.is_published() for info in sent)
         mq.loop_stop()
         mq.disconnect()
-        print("published on br/turnout")
+        print("published on br/turnout" if ok else "WARNING: could not publish on br/turnout (MQTT)")
 
 
 if __name__ == "__main__":
