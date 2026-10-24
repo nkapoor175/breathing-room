@@ -6,7 +6,7 @@
 import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from "react";
 import type {
   Announcement, ApprovalAnswer, ApprovalRequest, ChosenPlan, CostEvent, DeviceCommand, Forecast,
-  OfficerStatus, Report, Status, ZoneState,
+  OfficerStatus, Report, Status, TurnoutEstimate, ZoneState,
 } from "./types";
 
 export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
@@ -35,22 +35,34 @@ export type BusState = {
   costs: Stamped<CostEvent>[]; // oldest first
   devices: Record<string, Stamped<DeviceCommand>>;
   approvals: Record<string, Approval>;
+  turnout: Stamped<TurnoutEstimate> | null; // published once per run, not periodically
   raw: { topic: string; data: unknown; at: number }[]; // newest first
 };
 
 const initial: BusState = {
   connected: false, messages: 0, zones: {}, densityHistory: {}, forecast: null, reports: [],
-  plans: [], officers: {}, announcements: [], statuses: [], costs: [], devices: {}, approvals: {}, raw: [],
+  plans: [], officers: {}, announcements: [], statuses: [], costs: [], devices: {}, approvals: {}, turnout: null, raw: [],
 };
 
-type Msg = { type: "connected"; value: boolean } | { type: "message"; topic: string; data: unknown; at: number };
+type Msg =
+  | { type: "connected"; value: boolean }
+  | { type: "message"; topic: string; data: unknown; at: number; replay: boolean };
 
 const cap = <T,>(list: T[], n: number) => (list.length > n ? list.slice(0, n) : list);
 
 function reduce(s: BusState, m: Msg): BusState {
-  if (m.type === "connected") return { ...s, connected: m.value };
-  const { topic, at } = m;
+  // On every (re)connect the backend replays its current state ("replay": true) before live
+  // messages, so start from a clean slate: otherwise reports and costs would be counted twice.
+  // (Don't wait for the first replayed message to decide: a just-restarted backend may have
+  // nothing to replay yet.)
+  if (m.type === "connected") return m.value ? { ...initial, connected: true, messages: s.messages } : { ...s, connected: false };
+
+  const { topic } = m;
   const d = m.data as Record<string, unknown>;
+  // Replayed messages happened earlier: date them by their own timestamp, so "x min ago",
+  // approval countdowns and the cost-per-decision window stay right.
+  const own = m.replay && typeof d?.t === "string" ? Date.parse(d.t) : NaN;
+  const at = Number.isNaN(own) ? m.at : Math.min(own, m.at);
   const stamp = <T,>(x: T) => ({ ...x, receivedAt: at }) as Stamped<T>;
   const next: BusState = { ...s, messages: s.messages + 1, raw: cap([{ topic, data: m.data, at }, ...s.raw], 100) };
 
@@ -111,6 +123,9 @@ function reduce(s: BusState, m: Msg): BusState {
       next.approvals = { ...s.approvals, [a.approval_id]: a };
       break;
     }
+    case topic === "br/turnout":
+      next.turnout = stamp(d as unknown as TurnoutEstimate);
+      break;
     case topic === "br/approve": {
       const ans = d as unknown as ApprovalAnswer;
       const a = s.approvals[ans.approval_id];
@@ -138,8 +153,8 @@ export function BusProvider({ children }: { children: ReactNode }) {
       ws.onopen = () => { retry = 1000; dispatch({ type: "connected", value: true }); };
       ws.onmessage = (e) => {
         try {
-          const { topic, data } = JSON.parse(e.data);
-          dispatch({ type: "message", topic, data, at: Date.now() });
+          const { topic, data, replay } = JSON.parse(e.data);
+          dispatch({ type: "message", topic, data, at: Date.now(), replay: replay === true });
         } catch { /* ignore a malformed frame */ }
       };
       ws.onclose = () => {
