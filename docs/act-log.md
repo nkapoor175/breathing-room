@@ -12,12 +12,60 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 | A02 | Watchdog | ✅ Done Oct 23 (PR `act/watchdog`) |
 | A03 | Planner + executor skeleton | ✅ Done Oct 23 (PR `act/planner`) |
 | A04 | Report fusion | ✅ Done Oct 23 (PR `act/reports`) |
-| A05 | Telegram officer bot | Oct 25 |
-| A06 | Announcements (en/ta/hi) | Oct 25 |
+| A05 | Telegram officer bot | ⏳ Waiting for bot token |
+| A06 | Announcements (en/ta/hi) | ✅ Done Oct 25 (PR `act/announce-approve`) · ⏳ native-speaker check |
 | A07 | Tavily turnout estimator | Oct 26 |
 | A08 | Gateway, gate sign, serial bridge | Oct 26 |
 | A09 | Act dashboard panel | Oct 27 |
 | A10 | Devpost write-up + tool feedback | Oct 29 |
+| Extra | Operator approval for gate closures | ✅ Done Oct 25 (same PR) · ⏳ team OK on 2 new topics |
+
+---
+
+## Sun Oct 25
+
+### Done
+- PRs #2 (Planner) and #3 (Report fusion) merged on Oct 23 evening. Local merged branches deleted.
+- **Reviewed Ananya's PR #4 (Imagine setup)**. It doesn't touch shared or Act files, but found an integration bug: her venue id is `demo-venue-01` in `imagine/venue.json`, while the spec and everyone's `.env` use `vit-main-ground` at `imagine/venues/vit-main-ground.json`. Her `GET /venue/vit-main-ground` returns 404, so the planner silently fell back to my placeholder, where zone letters mean different places (my A = Stage front, her A = Main Entrance). Ultra would plan on one map while her simulator scores on another. Drafted a PR comment for Navika to post.
+- **Venue safety net**: `load_venue` now says where the venue came from and warns loudly when it falls back to the placeholder; `run_act` warns on `br/status` if the forecast has zones the venue doesn't (`zone_mismatch`).
+- **Translation model test** (3 announcement lines, reasoning off unless noted):
+  - Lightning: Tamil unusable. Korean characters mixed in ("쪽으로"), "left" became "right", "Gate" became "fort" (கோட்டை). Hindi fine.
+  - Super: Tamil line 1 said **right** when English said **left**; "don't push" became "don't lift" (தூக்காதீர்கள்). Hindi fine.
+  - Ultra no-think: directions right, but Malayalam letters and a nonsense word in one Tamil line.
+  - Ultra with reasoning: all 3 lines correct, ~3 s each.
+- **A06 announcements** (`act/announce.py`): approved phrasebook first, otherwise Ultra + automatic check (script, left/right, gate numbers, length), 1 retry per language, failing languages left out (English still plays). Executor sends announcements last so translation doesn't delay gates and officers.
+  - Live: 3 lines translated correctly, 1.4–3.1 s each, $0.005 total. **The checker caught a real Malayalam letter (ട) in Ultra's Tamil, and the retry fixed it.** The retried Tamil for "towards Stage front" (ஸ்டேஜ் முன்னேற் செல்லுங்கள்) passes the checks but reads awkwardly, which shows why the demo lines need a native speaker.
+- **Planner now drops announcements** over 20 words or containing panic words (danger, stampede, crush, panic, emergency, run, hurry, fire, bomb, die/dead/death, evacuate).
+- **Operator approval for gate closures**: executor holds closing actions and publishes `br/approval`; backend `POST /operator/approve` publishes `br/approve`; no answer in 120 s = gate unchanged; a newer plan cancels older requests. Live over the broker: approve → gate-3 `stop` sent only after approval; reject → gate-2 never closed. Opening gates goes out immediately.
+- 27 new tests (84 total pass), including the actual bad translations from the model test.
+- **Full-loop regression** with real Ultra: watchdog 0.9 s → Ultra 7.5 s → plan published **8.2 s** after the trigger; announcement went out in en/ta/hi ($0.0014).
+
+### Decisions
+- **Announcements are translated by Ultra with reasoning on**, not Lightning (spec). Why: Lightning and Super both flipped left/right in Tamil; on a loudspeaker that sends a crowd the wrong way. ~$0.0015 and ~2–3 s per new line; repeated lines are cached. `ANNOUNCE_MODEL` switches.
+- **Every translation is checked in code before it's broadcast**, and a language that fails twice is left out rather than sent. Wrong instructions are worse than English-only.
+- **`act/announcements_approved.json` starts empty.** Only entries with a `checked_by` field count. I won't mark my own Tamil as approved; a native speaker fills it for the demo lines.
+- **Always produce en + ta + hi** for every announcement (spec A06), even if Ultra's plan listed fewer `langs`.
+- **Only gate closures need approval** (`APPROVE_GATES=close`). Opening a gate makes more room and is never the dangerous direction; closing can trap people. `all` and `none` exist for testing or filming.
+- **No answer = no change.** An unanswered request expires after 120 s and the gate stays as it is. In a real event, an operator who isn't looking shouldn't have gates closed on their behalf.
+- **Two new MQTT topics: `br/approval` (Act → dashboard) and `br/approve` (dashboard/backend → Act)**. Additive, no existing shape changes, but topics are part of the Section 7 contract, so **needs Shirali's and Ananya's OK** (asked in the PR).
+- **Backend gets `POST /operator/approve`** (shared file, additive).
+
+### Observations
+- **Port 8000 on Navika's laptop is taken by another program** (serves `/health` and `/similarity`, not ours), so our backend failed to start there. Tested on 8010. Either stop that program before the integration evening or run our backend on another port and set `BACKEND_URL` to match.
+- Ultra's P1 again had a `hold_inflow` without zone/minutes; the validator repaired it (same as Oct 23). Could add one line to the planner prompt.
+
+### Blocked / waiting
+- **Telegram bot token** (A05).
+- **Tavily API key** (A07, tomorrow).
+- **Hardware** for A08 tomorrow: 2 ESP32s, LEDs, board package version. Gateway MAC for Shirali still pending.
+- **Dashboard shell owner**: A09 (Act panel) due Tue; feature freeze Tue 11:59 PM.
+- Ananya: venue id fix (comment drafted), `/score` officers shape.
+- Native speaker to check Tamil/Hindi demo lines → `act/announcements_approved.json`.
+- Team OK on `br/approval` / `br/approve`.
+
+### Next
+- A05 Telegram bot as soon as the token is in `.env`.
+- Mon Oct 26: A07 Tavily, A08 gateway + gate sign + serial bridge, integration evening (golden-path test).
 
 ---
 
@@ -89,4 +137,4 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 
 ### Next
 - Ask Ananya to confirm the `officers` shape in `POST /score` and to replace `data/demo-venue.json` with the real venue.
-- A05 Telegram officer bot and A06 announcements (Oct 25). A06 translation should also use `NO_THINK`; have a native speaker check Tamil and Hindi lines.
+- A05 Telegram officer bot and A06 announcements (Oct 25). A06 translation should also use `NO_THINK` (superseded Oct 25: Ultra with reasoning, see above); have a native speaker check Tamil and Hindi lines.

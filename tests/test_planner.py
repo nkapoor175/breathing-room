@@ -54,6 +54,27 @@ def test_made_up_or_unsafe_actions_are_dropped(ctx, action, reason):
     assert fixed is None and reason in notes[0]
 
 
+def test_long_announcement_dropped(ctx):
+    text = " ".join(["please"] * 21)
+    fixed, notes = validate_plan(plan({"type": "announce", "zone": "B", "text": text}), ctx)
+    assert fixed is None and "21 words" in notes[0]
+
+
+@pytest.mark.parametrize("text", ["Danger at gate 2, move back.", "Run to the exit now.", "This is an emergency."])
+def test_panic_words_dropped(ctx, text):
+    fixed, notes = validate_plan(plan({"type": "announce", "zone": "B", "text": text}), ctx)
+    assert fixed is None and "panic word" in notes[0]
+
+
+def test_calm_announcement_with_running_like_words_ok(ctx):
+    assert validate_plan(plan({"type": "announce", "zone": "B", "text": "Please keep walking slowly to Gate 2."}), ctx)[0]
+
+
+def test_zone_mismatch():
+    from act.planner import zone_mismatch
+    assert zone_mismatch(VENUE, ["A", "B"]) == set() and zone_mismatch(VENUE, ["A", "E"]) == {"E"}
+
+
 def test_too_many_actions_dropped(ctx):
     a = {"type": "announce", "zone": "A", "text": "Move left."}
     assert validate_plan(plan(*[a] * 7), ctx)[0] is None

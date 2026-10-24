@@ -11,7 +11,7 @@ One replan:
 
 The LLM proposes, the simulation decides.
 """
-import asyncio, json, os, time
+import asyncio, json, os, re, time
 from collections import deque
 from pathlib import Path
 from typing import Awaitable, Callable, Optional
@@ -31,21 +31,39 @@ MAX_HOLD_MIN = 20
 BACKUP_THRESHOLD = 0.3
 LLM_TIMEOUT_S = 40          # leaves time for scoring inside the 60 s target
 ALL_LANGS = ["en", "ta", "hi"]
+MAX_ANNOUNCE_WORDS = 20
+# Words that can cause panic or a rush if heard over a loudspeaker (planner prompt rule).
+PANIC_WORDS = re.compile(r"\b(danger\w*|stampede|crush\w*|panic|emergency|run|running|hurry|"
+                         r"fire|bomb|die|dying|dead|death|evacuate)\b", re.IGNORECASE)
 
 
 # ---------- inputs ----------
-def load_venue() -> Venue:
-    """Imagine API first, then Ananya's venue file, then our demo placeholder."""
+def load_venue(log: Callable[[str], None] = print) -> Venue:
+    """Imagine API first, then Ananya's venue file, then our demo placeholder.
+    Says where the venue came from, loudly if it is the placeholder."""
     try:
         r = httpx.get(f"{IMAGINE}/venue/{VENUE_ID}", timeout=5)
         r.raise_for_status()
+        log(f"venue: {VENUE_ID} from Imagine API {IMAGINE}")
         return Venue.model_validate(r.json())
-    except Exception:
-        pass
+    except Exception as e:
+        log(f"venue: Imagine API has no venue {VENUE_ID!r} ({type(e).__name__}); trying local files")
     for p in (ROOT / "imagine" / "venues" / f"{VENUE_ID}.json", ROOT / "data" / "demo-venue.json"):
         if p.exists():
+            if p.parent.name == "data":
+                log(f"venue: WARNING using the placeholder {p.relative_to(ROOT)}. If Imagine is running "
+                    f"with a different venue, plans and scores will refer to different zones. "
+                    f"Check VENUE_ID in .env.")
+            else:
+                log(f"venue: {VENUE_ID} from {p.relative_to(ROOT)}")
             return Venue.model_validate_json(p.read_text(encoding="utf-8"))
     raise FileNotFoundError(f"no venue {VENUE_ID}: Imagine API down and no local venue file")
+
+
+def zone_mismatch(venue: Venue, zone_ids) -> set[str]:
+    """Zone ids (e.g. from a forecast) that the venue doesn't have. Non-empty means
+    Act and Imagine are using different venues."""
+    return set(zone_ids) - {z.id for z in venue.zones}
 
 
 def build_context(venue: Venue, dog, officers_per_zone: dict[str, int],
@@ -124,6 +142,11 @@ def validate_plan(plan: Plan, ctx: dict) -> tuple[Optional[Plan], list[str]]:
                 return None, [f"announce in unknown zone {a.zone!r} or with no text"]
             if a.zone not in pa:
                 return None, [f"no loudspeaker in zone {a.zone}"]
+            if len(a.text.split()) > MAX_ANNOUNCE_WORDS:
+                return None, [f"announcement has {len(a.text.split())} words (max {MAX_ANNOUNCE_WORDS})"]
+            panic = PANIC_WORDS.search(a.text)
+            if panic:
+                return None, [f"announcement uses panic word {panic.group()!r}"]
             if not a.langs:
                 a.langs = list(ALL_LANGS)
         elif a.type == "hold_inflow":
