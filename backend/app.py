@@ -11,10 +11,12 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from backend.replay import Replay
 from common.bus import make_client, publish
 from common.timeutil import now_iso
 
 clients: set[asyncio.Queue] = set()   # one queue per connected browser
+replay = Replay()                     # current state for newly connected browsers
 results: list[dict] = []              # Serverless Job results (in memory)
 loop: asyncio.AbstractEventLoop | None = None
 mq = None
@@ -27,8 +29,10 @@ def on_mqtt(client, userdata, msg):
     except json.JSONDecodeError:
         data = msg.payload.decode(errors="ignore")
     item = {"topic": msg.topic, "data": data}
-    for q in list(clients):
-        loop.call_soon_threadsafe(q.put_nowait, item)
+    with replay.lock:                 # same lock as a new client's snapshot: no gaps, no doubles
+        replay.record(msg.topic, data)
+        for q in list(clients):
+            loop.call_soon_threadsafe(q.put_nowait, item)
 
 
 @asynccontextmanager
@@ -55,10 +59,14 @@ def health():
 
 @app.websocket("/ws")
 async def ws(socket: WebSocket):
-    """Every MQTT message as {"topic": ..., "data": ...}."""
+    """Every MQTT message as {"topic": ..., "data": ...}. A new client first gets the
+    current state (backend/replay.py), each marked "replay": true, then live messages."""
     await socket.accept()
-    q: asyncio.Queue = asyncio.Queue(maxsize=1000)
-    clients.add(q)
+    q: asyncio.Queue = asyncio.Queue(maxsize=2000)
+    with replay.lock:
+        for item in replay.snapshot():
+            q.put_nowait(item)
+        clients.add(q)
     try:
         while True:
             await socket.send_json(await q.get())

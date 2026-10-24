@@ -52,6 +52,10 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
     3. Lightning turned vague words into exact numbers ("thousands" → 3,000, "tens of thousands" → 30,000, "the scale of the crowd was striking" → 15,000). The new number check caught all four. Super invented none → Super.
     4. The spec's 2nd query had the date in it and missed the coverage of earlier rallies; dropped the date.
     5. Super labelled the Trichy numbers as if they were about Karur. Code now decides: a number counts for *this* event only if its article mentions the event's city; otherwise it's `past_event`.
+- **Backend replay** (`backend/replay.py`, shared backend): a newly opened or reloaded dashboard gets the current state first (each item marked `"replay": true`), then live messages: latest `br/turnout` / `br/plan` / `br/forecast` / `br/announce`; latest `br/status` per source, `br/officer` per officer, `br/zone_state` per zone; last 50 `br/report`, last 200 `br/cost`; only **still-pending** `br/approval` (dropped when answered, expired or replaced by a newer plan). Snapshot and live fan-out share one lock, so nothing is missed or doubled. 6 new tests (117 total pass).
+  - Live: a browser that connected after the Karur turnout card was published got it, twice in a row; a status and a pending approval were replayed, an already-approved one was not.
+  - **Bug found while testing, in A07:** `act.turnout --publish` disconnected right after publishing, so the message never left the laptop (0 of 1 delivered). That's why the dashboard never showed the earlier Karur card. Fixed: `common/bus.publish` now returns paho's receipt and the turnout command waits for it (1 of 1 delivered).
+  - `br/turnout` is now published with MQTT **retain**: the broker keeps it, so even a backend started *after* the publish gets the card (verified).
 - **Full-loop regression** with real Ultra: watchdog 0.9 s → Ultra 7.5 s → plan published **8.2 s** after the trigger; announcement went out in en/ta/hi ($0.0014).
 
 ### Decisions
@@ -72,6 +76,8 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 - **Turnout uses Super, not Lightning** (spec): Lightning made up numbers from vague words.
 - **Turnout search: `topic="general"` + `country`** (default india, `TURNOUT_COUNTRY` / `--country`), not `news`.
 - **New topic `br/turnout`** (needs team OK, like `br/approval`).
+- **Replay lives in the backend, not MQTT retain alone.** The browser only sees what the backend forwards over the WebSocket, and the backend forwarded live messages only, so retain by itself wouldn't fix a page reload. Retain is used just for `br/turnout` (one-off, must survive a backend restart). Plans, forecasts, statuses etc. are not retained: a stale plan replayed by the broker after a restart could look current.
+- **`common/bus.publish` gets `retain=False` and returns the publish receipt** (shared file, backward compatible).
 
 ### Observations
 - **Port clash on Navika's laptop**: the CampusFind AI image-similarity service (another project, `/health` + `/similarity`) was on port 8000, so our backend failed to start there; tested on 8010. Later the same day CampusFind was running on 8001 and 8000 was free again. Before the integration evening, check 8000 is free (or run our backend elsewhere and set `BACKEND_URL` + the dashboard's `NEXT_PUBLIC_BACKEND_URL`).
