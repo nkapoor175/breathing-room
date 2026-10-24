@@ -39,3 +39,6 @@ Thumbs.db
 
 # Arduino build output
 build/
+
+# Telegram sign-ups (chat ids)
+act/telegram_registry.json

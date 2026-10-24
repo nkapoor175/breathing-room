@@ -18,7 +18,9 @@ Human approval (APPROVE_GATES, default "close"):
   as it is. A newer plan cancels older pending approvals.
   APPROVE_GATES = "none" | "close" (only closing needs approval) | "all".
 
-Telegram (A05) plugs in through `notify`; until then instructions are printed.
+Instructions go out through `notify(officer, text, ask_status)`: the Telegram bot
+(act/telegram_bot.py) for officers with a phone, printed otherwise. Their
+On my way / Arrived presses come back through officer_pressed().
 Announcements are sent last so gates and officers aren't delayed by translation.
 """
 import json, os, re, threading, uuid
@@ -41,7 +43,33 @@ class Officers:
         self.list = json.loads(path.read_text(encoding="utf-8"))
         for o in self.list:
             o.setdefault("status", "idle")
+            o["default_name"] = o["name"]
         self.lock = threading.Lock()
+
+    def by_id(self, officer_id: str) -> Optional[dict]:
+        with self.lock:
+            return next((o for o in self.list if o["officer_id"] == officer_id), None)
+
+    def by_chat(self, chat_id: int) -> Optional[dict]:
+        with self.lock:
+            return next((o for o in self.list if o.get("telegram_chat_id") == chat_id), None)
+
+    def claim(self, zone: str, chat_id: int, name: str) -> dict:
+        """A phone signs up as an officer in zone: it takes over a simulated officer
+        there (or a new officer is added). A phone holds at most one officer."""
+        with self.lock:
+            for o in self.list:
+                if o.get("telegram_chat_id") == chat_id:
+                    o["telegram_chat_id"], o["name"] = None, o["default_name"]
+            free = [o for o in self.list if o["zone"] == zone and not o.get("telegram_chat_id")]
+            if free:
+                o = free[0]
+            else:
+                o = {"officer_id": f"O{len(self.list) + 1}", "zone": zone, "status": "idle",
+                     "default_name": f"Officer {len(self.list) + 1}"}
+                self.list.append(o)
+            o["telegram_chat_id"], o["name"] = chat_id, name
+            return o
 
     def per_zone(self) -> dict[str, int]:
         with self.lock:
@@ -76,7 +104,7 @@ class Executor:
         self.venue = venue
         self.officers = officers
         self.publish = publish
-        self.notify = notify or (lambda o, text: print(f"  -> {o['name']}: {text}"))
+        self.notify = notify or (lambda o, text, ask_status=False: print(f"  -> {o['name']}: {text}"))
         self.travel_s = travel_s
         self.translate = translate or (lambda en: {"en": en})
         self.approve = approve
@@ -100,6 +128,17 @@ class Executor:
         with self.officers.lock:
             o["zone"] = zone
         self._status(o, "arrived", task)
+
+    def officer_pressed(self, officer_id: str, status: str) -> Optional[dict]:
+        """An officer pressed On my way / Arrived on their phone. Returns the officer."""
+        o = self.officers.by_id(officer_id)
+        if not o or status not in ("on_the_way", "arrived"):
+            return None
+        if status == "arrived":
+            self._arrive(o, o.get("task_zone", o["zone"]), o.get("task"))
+        else:
+            self._status(o, status, o.get("task"))
+        return o
 
     # ---------- gates and approvals ----------
     def needs_approval(self, a: Action) -> bool:
@@ -158,7 +197,8 @@ class Executor:
             if a.type == "move_officers":
                 task = f"Move to {self.names.get(a.to_zone, a.to_zone)} (zone {a.to_zone}) now."
                 for o in self.officers.pick(a.from_zone, a.count or 0):
-                    self.notify(o, f"{task} Reason: {why}")
+                    o["task"], o["task_zone"] = task, a.to_zone
+                    self.notify(o, f"{task} Reason: {why}", ask_status=True)
                     self._status(o, "assigned", task)
                     if not o.get("telegram_chat_id"):           # simulated officer walks on its own
                         threading.Timer(2, self._status, (o, "on_the_way", task)).start()

@@ -19,7 +19,7 @@ def chosen(*actions):
 def make(travel_s=0.2, approve="none", timeout=60, translate=None):
     sent, told = [], []
     ex = Executor(VENUE, Officers(), lambda topic, m: sent.append((topic, m)),
-                  notify=lambda o, text: told.append((o["officer_id"], text)), travel_s=travel_s,
+                  notify=lambda o, text, ask_status=False: told.append((o["officer_id"], text)), travel_s=travel_s,
                   translate=translate, approve=approve, approval_timeout_s=timeout)
     return ex, sent, told
 

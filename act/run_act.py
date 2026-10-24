@@ -15,7 +15,7 @@ Env:  PLANNER_MODEL=super   faster backup planner for filming (default ultra)
 """
 import asyncio, json, threading
 
-from act import watchdog
+from act import telegram_bot, watchdog
 from act.announce import Announcer, nemotron_ask as announce_ask
 from act.executor import APPROVE_GATES, Executor, Officers
 from act.planner import (PLANNER_MODEL, build_context, load_venue, nemotron_propose, replan,
@@ -46,6 +46,12 @@ def main():
     ex_mq.on_connect = lambda c, u, f, rc, p: c.subscribe("br/approve")
     ex_mq.on_message = on_approve
     ex_mq.loop_start()
+
+    bot = telegram_bot.build(venue, officers, executor, lambda topic, m: publish(ex_mq, topic, m),
+                             lambda c: publish(ex_mq, "br/cost", c))
+    if bot:
+        executor.notify = bot.notify
+        bot.start_in_thread()
 
     lock = threading.Lock()
     state = {"busy": False, "again": None}

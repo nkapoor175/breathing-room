@@ -12,11 +12,11 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 | A02 | Watchdog | ✅ Done Oct 23 (PR `act/watchdog`) |
 | A03 | Planner + executor skeleton | ✅ Done Oct 23 (PR `act/planner`) |
 | A04 | Report fusion | ✅ Done Oct 23 (PR `act/reports`) |
-| A05 | Telegram officer bot | ⏳ Waiting for bot token |
+| A05 | Telegram officer bot | ✅ Done Oct 25 (PR `act/telegram`), tested on a real phone |
 | A06 | Announcements (en/ta/hi) | ✅ Done Oct 25 (PR `act/announce-approve`) · ⏳ native-speaker check |
 | A07 | Tavily turnout estimator | Oct 26 |
 | A08 | Gateway, gate sign, serial bridge | Oct 26 |
-| A09 | Act dashboard panel | Oct 27 |
+| A09 | Act dashboard panel | ✅ Built Oct 25 in a forked session (PR #6) |
 | A10 | Devpost write-up + tool feedback | Oct 29 |
 | Extra | Operator approval for gate closures | ✅ Done Oct 25 (same PR) · ⏳ team OK on 2 new topics |
 
@@ -38,6 +38,11 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 - **Planner now drops announcements** over 20 words or containing panic words (danger, stampede, crush, panic, emergency, run, hurry, fire, bomb, die/dead/death, evacuate).
 - **Operator approval for gate closures**: executor holds closing actions and publishes `br/approval`; backend `POST /operator/approve` publishes `br/approve`; no answer in 120 s = gate unchanged; a newer plan cancels older requests. Live over the broker: approve → gate-3 `stop` sent only after approval; reject → gate-2 never closed. Opening gates goes out immediately.
 - 27 new tests (84 total pass), including the actual bad translations from the model test.
+- Oct 25: dashboard shell + Act panel (A09) built in a forked session, PR #6; tested live incl. approval round trip; Windows reserves port 3000, dashboard runs on 3100.
+- Telegram bot token and Tavily key saved in `.env` (by the dashboard session) and verified: bot is `@breathing_room_officers_bot`.
+- **A05 Telegram officer bot** (`act/telegram_bot.py`): `/start` → Officer/Volunteer → zone; an officer's phone takes over a simulated officer in that zone. Plans reach the phone with [On my way] [Arrived] buttons; presses publish `OfficerStatus`. Any text from a registered person → report fusion → `br/report` (sender's zone if the model can't tell). `/whoami`. Sign-ups saved in `act/telegram_registry.json` (git-ignored). Runs inside `run_act` on its own thread; `python -m act.telegram_bot` runs it alone. 11 new tests (95 total pass).
+  - **Live test on Navika's phone**: signed up as officer in zone C (took over O7, shown as "Navika", not simulated) → instruction "Move to Gate 2 approach (zone B) now" arrived with buttons → On my way → Arrived (zone C → B on the dashboard), ~4 s per press → typed "people pushing near the stage" → Report zone A, severity 4, source telegram.
+  - Bug found in the live test and fixed: after "Arrived", the saved sign-up kept the old zone, so a restart (or a report with no clear location) would have used zone C. Arriving now updates the saved zone.
 - **Full-loop regression** with real Ultra: watchdog 0.9 s → Ultra 7.5 s → plan published **8.2 s** after the trigger; announcement went out in en/ta/hi ($0.0014).
 
 ### Decisions
@@ -49,22 +54,22 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 - **No answer = no change.** An unanswered request expires after 120 s and the gate stays as it is. In a real event, an operator who isn't looking shouldn't have gates closed on their behalf.
 - **Two new MQTT topics: `br/approval` (Act → dashboard) and `br/approve` (dashboard/backend → Act)**. Additive, no existing shape changes, but topics are part of the Section 7 contract, so **needs Shirali's and Ananya's OK** (asked in the PR).
 - **Backend gets `POST /operator/approve`** (shared file, additive).
+- **A phone takes over an existing simulated officer** in its zone (instead of adding a new one), so the planner's officer counts stay the same whether or not people have signed up. Extra phones beyond a zone's officers are added as new officers.
+- **Only the phone an instruction went to can press its buttons**; anyone else gets "This instruction isn't yours."
+- **Officers and volunteers can both send reports**; a report with no clear zone uses the sender's zone.
 
 ### Observations
-- **Port 8000 on Navika's laptop is taken by another program** (serves `/health` and `/similarity`, not ours), so our backend failed to start there. Tested on 8010. Either stop that program before the integration evening or run our backend on another port and set `BACKEND_URL` to match.
+- **Port clash on Navika's laptop**: the CampusFind AI image-similarity service (another project, `/health` + `/similarity`) was on port 8000, so our backend failed to start there; tested on 8010. Later the same day CampusFind was running on 8001 and 8000 was free again. Before the integration evening, check 8000 is free (or run our backend elsewhere and set `BACKEND_URL` + the dashboard's `NEXT_PUBLIC_BACKEND_URL`).
 - Ultra's P1 again had a `hold_inflow` without zone/minutes; the validator repaired it (same as Oct 23). Could add one line to the planner prompt.
 
 ### Blocked / waiting
-- **Telegram bot token** (A05).
-- **Tavily API key** (A07, tomorrow).
 - **Hardware** for A08 tomorrow: 2 ESP32s, LEDs, board package version. Gateway MAC for Shirali still pending.
-- **Dashboard shell owner**: A09 (Act panel) due Tue; feature freeze Tue 11:59 PM.
+- PR #6 (dashboard) to review/merge; feature freeze Tue 11:59 PM.
 - Ananya: venue id fix (comment drafted), `/score` officers shape.
 - Native speaker to check Tamil/Hindi demo lines → `act/announcements_approved.json`.
 - Team OK on `br/approval` / `br/approve`.
 
 ### Next
-- A05 Telegram bot as soon as the token is in `.env`.
 - Mon Oct 26: A07 Tavily, A08 gateway + gate sign + serial bridge, integration evening (golden-path test).
 
 ---
