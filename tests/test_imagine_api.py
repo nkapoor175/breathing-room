@@ -1,5 +1,5 @@
 
-from imagine.fake_imagine import apply_plan_to_venue
+from imagine.fake_imagine import apply_plan_to_venue, validate_generated_venue
 from common.contracts import Plan
 from imagine.sim import simulate
 
@@ -173,3 +173,57 @@ def test_score_rejects_announcement_for_unknown_zone():
 
     assert response.status_code == 400
     assert "Unknown zone" in response.json()["detail"]
+
+
+def test_validate_generated_venue_accepts_demo_venue():
+    from imagine.fake_imagine import venue
+
+    validate_generated_venue(venue)
+
+
+def test_validate_generated_venue_rejects_unknown_link_source():
+    from copy import deepcopy
+    import pytest
+    from imagine.fake_imagine import venue
+
+    invalid_venue = deepcopy(venue)
+    invalid_venue.links[0].from_zone = "UNKNOWN"
+
+    with pytest.raises(ValueError, match="unknown source zone"):
+        validate_generated_venue(invalid_venue)
+
+
+def test_validate_generated_venue_rejects_unknown_link_destination():
+    from copy import deepcopy
+    import pytest
+    from imagine.fake_imagine import venue
+
+    invalid_venue = deepcopy(venue)
+    invalid_venue.links[0].to_zone = "UNKNOWN"
+
+    with pytest.raises(ValueError, match="unknown destination zone"):
+        validate_generated_venue(invalid_venue)
+
+
+def test_validate_generated_venue_rejects_unknown_entry_zone():
+    from copy import deepcopy
+    import pytest
+    from imagine.fake_imagine import venue
+
+    invalid_venue = deepcopy(venue)
+    invalid_venue.entries[0].zone = "UNKNOWN"
+
+    with pytest.raises(ValueError, match="references an unknown zone"):
+        validate_generated_venue(invalid_venue)
+
+
+def test_validate_generated_venue_rejects_unknown_pa_zone():
+    from copy import deepcopy
+    import pytest
+    from imagine.fake_imagine import venue
+
+    invalid_venue = deepcopy(venue)
+    invalid_venue.pa_zones.append("UNKNOWN")
+
+    with pytest.raises(ValueError, match="PA zones must refer to known zones"):
+        validate_generated_venue(invalid_venue)

@@ -18,3 +18,4 @@ pytest>=8
 
 # Sense (Shirali) needs torch, torchvision, lwcc, opencv-python. Those are heavy and lwcc
 # may pin an old torch, so keep them in sense/requirements.txt / a separate venv (spec 9.5).
+python-multipart

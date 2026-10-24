@@ -16,8 +16,13 @@ from contextlib import asynccontextmanager
 from copy import deepcopy
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from pydantic import ValidationError
+import base64
+import os
+from io import BytesIO
+
+from PIL import Image, UnidentifiedImageError
 
 from common.bus import make_client, publish
 from common.contracts import (
@@ -31,6 +36,37 @@ from common.contracts import (
 )
 from common.timeutil import now_iso
 from imagine.sim import load_assumptions, load_venue, simulate
+
+MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
+ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+
+
+def validate_uploaded_image(contents: bytes) -> tuple[str, str]:
+    """Validate an uploaded image and return (data URL, image format)."""
+    if not contents:
+        raise ValueError("The uploaded image is empty.")
+
+    if len(contents) > MAX_IMAGE_BYTES:
+        raise ValueError("Image must be 10 MB or smaller.")
+
+    try:
+        with Image.open(BytesIO(contents)) as image:
+            image_format = image.format
+            image.verify()
+
+        if image_format not in ALLOWED_IMAGE_FORMATS:
+            raise ValueError("Upload a JPEG, PNG, or WEBP image.")
+
+        with Image.open(BytesIO(contents)) as image:
+            image = image.convert("RGB")
+            buffer = BytesIO()
+            image.save(buffer, format="PNG")
+            encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+
+    except (UnidentifiedImageError, OSError) as exc:
+        raise ValueError("The uploaded file is not a valid image.") from exc
+
+    return f"data:image/png;base64,{encoded}", image_format
 
 logger = logging.getLogger(__name__)
 IMAGINE_DIR = Path(__file__).resolve().parent
@@ -141,6 +177,38 @@ def apply_plan_to_venue(plan: Plan) -> Venue:
         link.state = action.state
 
     return planned_venue
+
+
+
+def validate_generated_venue(generated_venue: Venue) -> None:
+    """Reject venue twins containing invalid zone references."""
+    zone_ids = {zone.id for zone in generated_venue.zones}
+
+    if not zone_ids:
+        raise ValueError("Generated venue must contain at least one zone.")
+
+    for link in generated_venue.links:
+        if link.from_zone != "outside" and link.from_zone not in zone_ids:
+            raise ValueError(
+                f"Generated link {link.id} has an unknown source zone."
+            )
+
+        if link.to_zone != "outside" and link.to_zone not in zone_ids:
+            raise ValueError(
+                f"Generated link {link.id} has an unknown destination zone."
+            )
+
+    for entry in generated_venue.entries:
+        if entry.zone not in zone_ids:
+            raise ValueError(
+                f"Generated entry {entry.name} references an unknown zone."
+            )
+
+    if not set(generated_venue.pa_zones).issubset(zone_ids):
+        raise ValueError(
+            "Generated PA zones must refer to known zones."
+        )
+
 
 
 def get_hold_durations(plan: Plan) -> dict[str, int]:
@@ -287,3 +355,69 @@ def score(body: dict):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return score_forecast(plan.plan_id, forecast)
+
+
+@app.post("/twin/from-photo", response_model=Venue)
+async def twin_from_photo(file: UploadFile = File(...)):
+    """Generate a venue twin from an uploaded site-plan image."""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=400,
+            detail="Upload an image file.",
+        )
+
+    contents = await file.read(MAX_IMAGE_BYTES + 1)
+
+    try:
+        data_url, image_format = validate_uploaded_image(contents)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        await file.close()
+
+    # Check the key before importing the shared helper.
+    if not os.environ.get("NEBIUS_API_KEY"):
+        raise HTTPException(
+            status_code=503,
+            detail="Venue generation is unavailable until the Nebius API key is configured.",
+        )
+
+    # Import lazily so the app can start without the Nebius key.
+    from common.llm import call_json
+
+    try:
+        generated_venue = call_json(
+            role="vl",
+            purpose="venue_twin",
+            system=(
+                "You create venue digital twins from site-plan images. "
+                "Return only data matching the supplied Venue schema. "
+                "Do not invent precise real-world measurements from pixels. "
+                "Estimate areas and widths conservatively, and explain "
+                "uncertain measurements in capacity_note. "
+                "Use unique zone IDs, connect links to valid zone IDs or "
+                "'outside', and keep polygons within the image bounds."
+            ),
+            user=(
+                "Analyze this site plan and create a venue twin. "
+                "Use the image dimensions as the coordinate system for both "
+                "polygon_px and polygon_map. If exact scale is unavailable, "
+                "clearly label area and width estimates as approximate in "
+                "capacity_note. Set venue_id to 'uploaded-venue'."
+            ),
+            schema=Venue,
+            images=[data_url],
+        )
+    except Exception:
+        logger.exception("Venue twin generation failed")
+        raise HTTPException(
+            status_code=502,
+            detail="The venue twin could not be generated. Please try again.",
+        )
+
+    try:
+        validate_generated_venue(generated_venue)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return generated_venue
