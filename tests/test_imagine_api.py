@@ -227,3 +227,51 @@ def test_validate_generated_venue_rejects_unknown_pa_zone():
 
     with pytest.raises(ValueError, match="PA zones must refer to known zones"):
         validate_generated_venue(invalid_venue)
+
+
+def test_validate_generated_venue_rejects_duplicate_zone_ids():
+    from copy import deepcopy
+    import pytest
+    from imagine.fake_imagine import venue, validate_generated_venue
+
+    invalid_venue = deepcopy(venue)
+    invalid_venue.zones[1].id = invalid_venue.zones[0].id
+
+    with pytest.raises(ValueError, match="duplicate zone IDs"):
+        validate_generated_venue(invalid_venue)
+
+
+def test_validate_generated_venue_rejects_nonpositive_area():
+    from copy import deepcopy
+    import pytest
+    from imagine.fake_imagine import venue, validate_generated_venue
+
+    invalid_venue = deepcopy(venue)
+    invalid_venue.zones[0].area_m2 = 0
+
+    with pytest.raises(ValueError, match="positive area"):
+        validate_generated_venue(invalid_venue)
+
+
+def test_validate_generated_venue_rejects_polygon_with_too_few_points():
+    from copy import deepcopy
+    import pytest
+    from imagine.fake_imagine import venue, validate_generated_venue
+
+    invalid_venue = deepcopy(venue)
+    invalid_venue.zones[0].polygon_map = [[0, 0], [10, 10]]
+
+    with pytest.raises(ValueError, match="at least 3 points"):
+        validate_generated_venue(invalid_venue)
+
+
+def test_validate_generated_venue_rejects_nonpositive_link_width():
+    from copy import deepcopy
+    import pytest
+    from imagine.fake_imagine import venue, validate_generated_venue
+
+    invalid_venue = deepcopy(venue)
+    invalid_venue.links[1].width_m = 0
+
+    with pytest.raises(ValueError, match="positive width"):
+        validate_generated_venue(invalid_venue)

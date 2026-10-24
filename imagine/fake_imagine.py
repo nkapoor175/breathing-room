@@ -181,30 +181,70 @@ def apply_plan_to_venue(plan: Plan) -> Venue:
 
 
 def validate_generated_venue(generated_venue: Venue) -> None:
-    """Reject venue twins containing invalid zone references."""
-    zone_ids = {zone.id for zone in generated_venue.zones}
+    """Reject venue twins with invalid geometry or zone references."""
+    zones = generated_venue.zones
+    zone_ids = [zone.id for zone in zones]
+    known_zone_ids = set(zone_ids)
 
-    if not zone_ids:
+    if not zones:
         raise ValueError("Generated venue must contain at least one zone.")
 
+    if len(zone_ids) != len(known_zone_ids):
+        raise ValueError("Generated venue contains duplicate zone IDs.")
+
+    for zone in zones:
+        if zone.area_m2 <= 0:
+            raise ValueError(
+                f"Zone {zone.id} must have a positive area."
+            )
+
+        for polygon_name in ("polygon_px", "polygon_map"):
+            polygon = getattr(zone, polygon_name)
+            if len(polygon) < 3:
+                raise ValueError(
+                    f"Zone {zone.id} {polygon_name} must contain at least 3 points."
+                )
+
+            if any(
+                len(point) != 2
+                or not all(
+                    isinstance(value, (int, float))
+                    and not isinstance(value, bool)
+                    for value in point
+                )
+                for point in polygon
+            ):
+                raise ValueError(
+                    f"Zone {zone.id} {polygon_name} must contain 2D numeric points."
+                )
+
+    link_ids = [link.id for link in generated_venue.links]
+    if len(link_ids) != len(set(link_ids)):
+        raise ValueError("Generated venue contains duplicate link IDs.")
+
     for link in generated_venue.links:
-        if link.from_zone != "outside" and link.from_zone not in zone_ids:
+        if link.width_m <= 0:
+            raise ValueError(
+                f"Link {link.id} must have a positive width."
+            )
+
+        if link.from_zone != "outside" and link.from_zone not in known_zone_ids:
             raise ValueError(
                 f"Generated link {link.id} has an unknown source zone."
             )
 
-        if link.to_zone != "outside" and link.to_zone not in zone_ids:
+        if link.to_zone != "outside" and link.to_zone not in known_zone_ids:
             raise ValueError(
                 f"Generated link {link.id} has an unknown destination zone."
             )
 
     for entry in generated_venue.entries:
-        if entry.zone not in zone_ids:
+        if entry.zone not in known_zone_ids:
             raise ValueError(
                 f"Generated entry {entry.name} references an unknown zone."
             )
 
-    if not set(generated_venue.pa_zones).issubset(zone_ids):
+    if not set(generated_venue.pa_zones).issubset(known_zone_ids):
         raise ValueError(
             "Generated PA zones must refer to known zones."
         )
