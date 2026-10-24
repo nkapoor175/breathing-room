@@ -108,3 +108,32 @@ export type ApprovalRequest = {
 };
 
 export type ApprovalAnswer = { t: string; approval_id: string; approved: boolean; by?: string };
+
+// br/turnout (A07, act/turnout.py TurnoutEstimate): Tavily-based turnout estimate, one per run.
+export type TurnoutSource = {
+  url: string;
+  quote: string;
+  estimate: number;
+  kind: "expected" | "reported" | "declared" | "past_event";
+  published?: string | null;
+};
+
+export type TurnoutEstimate = {
+  t: string;
+  event: string;
+  city: string;
+  date: string; // YYYY-MM-DD
+  declared: number;
+  low: number | null;
+  high: number | null;
+  ratio: number | null; // high / declared
+  based_on: "this_event" | "past_events" | "none";
+  warning: boolean; // ratio > 1.5
+  message: string; // card headline
+  sources: TurnoutSource[];
+  dropped: number; // sources rejected by the quote check
+  note: string; // model's one-liner: its numbers are NOT facts, only sources are checked
+  window: { start_date: string; end_date: string };
+  mode: "before_event" | "up_to_today";
+  searches: number;
+};

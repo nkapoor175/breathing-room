@@ -6,7 +6,7 @@
 import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from "react";
 import type {
   Announcement, ApprovalAnswer, ApprovalRequest, ChosenPlan, CostEvent, DeviceCommand, Forecast,
-  OfficerStatus, Report, Status, ZoneState,
+  OfficerStatus, Report, Status, TurnoutEstimate, ZoneState,
 } from "./types";
 
 export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
@@ -35,12 +35,13 @@ export type BusState = {
   costs: Stamped<CostEvent>[]; // oldest first
   devices: Record<string, Stamped<DeviceCommand>>;
   approvals: Record<string, Approval>;
+  turnout: Stamped<TurnoutEstimate> | null; // published once per run, not periodically
   raw: { topic: string; data: unknown; at: number }[]; // newest first
 };
 
 const initial: BusState = {
   connected: false, messages: 0, zones: {}, densityHistory: {}, forecast: null, reports: [],
-  plans: [], officers: {}, announcements: [], statuses: [], costs: [], devices: {}, approvals: {}, raw: [],
+  plans: [], officers: {}, announcements: [], statuses: [], costs: [], devices: {}, approvals: {}, turnout: null, raw: [],
 };
 
 type Msg = { type: "connected"; value: boolean } | { type: "message"; topic: string; data: unknown; at: number };
@@ -111,6 +112,9 @@ function reduce(s: BusState, m: Msg): BusState {
       next.approvals = { ...s.approvals, [a.approval_id]: a };
       break;
     }
+    case topic === "br/turnout":
+      next.turnout = stamp(d as unknown as TurnoutEstimate);
+      break;
     case topic === "br/approve": {
       const ans = d as unknown as ApprovalAnswer;
       const a = s.approvals[ans.approval_id];

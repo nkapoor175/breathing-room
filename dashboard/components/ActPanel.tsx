@@ -61,6 +61,8 @@ export default function ActPanel() {
 
       <Approvals approvals={Object.values(bus.approvals)} now={now} />
 
+      <Turnout />
+
       <Section title="Chosen plan" right={plan && `${plan.candidates_considered} plans tested · ${ago(plan.receivedAt, now)}`}>
         {!plan ? <Empty>No plan yet.</Empty> : (
           <div className="flex flex-col gap-3 rounded-xl border border-zinc-200 p-3 dark:border-zinc-700">
@@ -148,6 +150,56 @@ function Approvals({ approvals, now }: { approvals: Approval[]; now: number }) {
         </p>
       ))}
       {error && open.length > 0 && <p className="text-xs text-red-600">{error}</p>}
+    </Section>
+  );
+}
+
+const KIND: Record<string, string> = { expected: "expected", reported: "reported", declared: "declared", past_event: "past event" };
+
+// Pre-event turnout check (A07): Tavily news search vs the crowd size the organizer declared.
+// Only the quoted sources are shown as evidence; the model's own note is not.
+function Turnout() {
+  const { turnout: e } = useBus();
+  const now = useNow(10000);
+  if (!e) return null;
+  const n = (x: number) => x.toLocaleString("en-IN");
+  const range = e.low != null && e.high != null && e.low !== e.high ? `${n(e.low)}–${n(e.high)}` : e.high != null ? n(e.high) : null;
+  const tone = !e.warning
+    ? "border-zinc-200 dark:border-zinc-700"
+    : (e.ratio ?? 0) >= 3
+      ? "border-red-400 bg-red-50 dark:bg-red-950/30"
+      : "border-amber-400 bg-amber-50 dark:bg-amber-950/30";
+
+  return (
+    <Section title="Turnout check (before the event)" right={ago(e.receivedAt, now)}>
+      <div className={`flex flex-col gap-2 rounded-xl border-2 p-3 ${tone}`}>
+        <p className="font-semibold">{e.warning && "⚠️ "}{e.message}</p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">{e.event} · {e.city} · {e.date}</p>
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+          <span>Declared <b className="tabular-nums">{n(e.declared)}</b></span>
+          {range && <span>· likely {e.low != null && e.low !== e.high ? "" : "up to "}<b className="tabular-nums">{range}</b></span>}
+          {e.ratio != null && <Pill className={e.warning ? "bg-red-600 text-white" : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"}>{e.ratio.toFixed(1)}× declared</Pill>}
+        </div>
+        {e.based_on === "past_events" && <p className="text-xs text-zinc-500">Based on this organizer&apos;s recent events.</p>}
+        {e.based_on === "none" && <p className="text-xs text-zinc-500">No usable crowd numbers found in the news.</p>}
+        {e.sources.length > 0 && (
+          <ul className="flex flex-col gap-1.5 text-sm">
+            {e.sources.map((s, i) => (
+              <li key={i} className="border-l-2 border-zinc-300 pl-2 dark:border-zinc-600">
+                <span className="text-zinc-600 dark:text-zinc-300">“{s.quote}”</span>{" "}
+                <a href={s.url} target="_blank" rel="noopener noreferrer" className="break-all text-sky-700 underline dark:text-sky-300">
+                  {new URL(s.url).hostname.replace(/^www\./, "")}
+                </a>
+                <span className="text-xs text-zinc-500"> · {KIND[s.kind] ?? s.kind} {n(s.estimate)}{s.published ? ` · ${s.published}` : ""}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-xs text-zinc-500">
+          {e.mode === "before_event" && <>Only news published before {e.date}. </>}
+          {e.searches} Tavily search{e.searches === 1 ? "" : "es"}{e.dropped > 0 && ` · ${e.dropped} source${e.dropped === 1 ? "" : "s"} dropped (quote didn't check out)`}
+        </p>
+      </div>
     </Section>
   );
 }
