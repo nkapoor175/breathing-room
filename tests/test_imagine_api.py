@@ -3,8 +3,12 @@ from imagine.fake_imagine import apply_plan_to_venue, validate_generated_venue
 from common.contracts import Plan
 from imagine.sim import simulate
 
-def test_gate_plan_closes_gate_on_copy_only():
-    from imagine.fake_imagine import venue
+def test_gate_plan_closes_gate_on_copy_only(monkeypatch):
+    from imagine import fake_imagine
+    from imagine.sim import load_venue
+
+    monkeypatch.setattr(fake_imagine, "venue", load_venue())
+    venue = fake_imagine.venue
 
     original_state = next(
         link.state for link in venue.links if link.id == "G3"
@@ -61,7 +65,9 @@ def test_gate_plan_rejects_unknown_link():
 def test_score_passes_hold_inflow_to_simulator(monkeypatch):
     from fastapi.testclient import TestClient
     from imagine import fake_imagine
-    from imagine.sim import simulate
+    from imagine.sim import simulate, load_venue
+
+    monkeypatch.setattr(fake_imagine, "venue", load_venue())
 
     captured = {}
 
@@ -107,7 +113,9 @@ def test_score_passes_hold_inflow_to_simulator(monkeypatch):
 def test_score_passes_announcement_zone_to_simulator(monkeypatch):
     from fastapi.testclient import TestClient
     from imagine import fake_imagine
-    from imagine.sim import simulate
+    from imagine.sim import simulate, load_venue
+
+    monkeypatch.setattr(fake_imagine, "venue", load_venue())
 
     captured = {}
 
@@ -275,3 +283,31 @@ def test_validate_generated_venue_rejects_nonpositive_link_width():
 
     with pytest.raises(ValueError, match="positive width"):
         validate_generated_venue(invalid_venue)
+
+
+def test_update_venue_saves_and_activates_venue(tmp_path, monkeypatch):
+    from copy import deepcopy
+    from fastapi.testclient import TestClient
+    from imagine import fake_imagine
+    original_venue = fake_imagine.venue
+    monkeypatch.setattr(fake_imagine, "venue", original_venue)
+    # Use a temporary file so the real project files stay untouched.
+    monkeypatch.setattr(
+        fake_imagine,
+        "ACTIVE_VENUE_PATH",
+        tmp_path / "active_venue.json",
+    )
+
+    updated = deepcopy(fake_imagine.venue)
+    updated.name = "Updated Demo Venue"
+
+    with TestClient(fake_imagine.app) as client:
+        response = client.put(
+            f"/venue/{fake_imagine.venue.venue_id}",
+            json=updated.model_dump(mode="json", by_alias=True),
+        )
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Updated Demo Venue"
+    assert fake_imagine.venue.name == "Updated Demo Venue"
+    assert (tmp_path / "active_venue.json").exists()

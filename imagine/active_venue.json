@@ -1,0 +1,298 @@
+{
+  "venue_id": "uploaded-venue",
+  "name": "Residential Unit",
+  "zones": [
+    {
+      "id": "zone_bedroom",
+      "name": "Bedroom",
+      "area_m2": 12.5,
+      "polygon_px": [
+        [
+          156.0,
+          62.0
+        ],
+        [
+          447.0,
+          62.0
+        ],
+        [
+          447.0,
+          477.0
+        ],
+        [
+          156.0,
+          477.0
+        ]
+      ],
+      "polygon_map": [
+        [
+          156.0,
+          62.0
+        ],
+        [
+          447.0,
+          62.0
+        ],
+        [
+          447.0,
+          477.0
+        ],
+        [
+          156.0,
+          477.0
+        ]
+      ],
+      "capacity_note": "Area is approximate; no scale bar provided in the site plan."
+    },
+    {
+      "id": "zone_living_room",
+      "name": "Living Room",
+      "area_m2": 18.0,
+      "polygon_px": [
+        [
+          156.0,
+          477.0
+        ],
+        [
+          447.0,
+          477.0
+        ],
+        [
+          447.0,
+          937.0
+        ],
+        [
+          156.0,
+          937.0
+        ]
+      ],
+      "polygon_map": [
+        [
+          156.0,
+          477.0
+        ],
+        [
+          447.0,
+          477.0
+        ],
+        [
+          447.0,
+          937.0
+        ],
+        [
+          156.0,
+          937.0
+        ]
+      ],
+      "capacity_note": "Area is approximate; no scale bar provided in the site plan."
+    },
+    {
+      "id": "zone_hallway",
+      "name": "Hallway",
+      "area_m2": 4.0,
+      "polygon_px": [
+        [
+          447.0,
+          62.0
+        ],
+        [
+          553.0,
+          62.0
+        ],
+        [
+          553.0,
+          937.0
+        ],
+        [
+          447.0,
+          937.0
+        ]
+      ],
+      "polygon_map": [
+        [
+          447.0,
+          62.0
+        ],
+        [
+          553.0,
+          62.0
+        ],
+        [
+          553.0,
+          937.0
+        ],
+        [
+          447.0,
+          937.0
+        ]
+      ],
+      "capacity_note": "Area is approximate; no scale bar provided in the site plan."
+    },
+    {
+      "id": "zone_bathroom",
+      "name": "Bathroom",
+      "area_m2": 5.0,
+      "polygon_px": [
+        [
+          553.0,
+          62.0
+        ],
+        [
+          844.0,
+          62.0
+        ],
+        [
+          844.0,
+          400.0
+        ],
+        [
+          553.0,
+          400.0
+        ]
+      ],
+      "polygon_map": [
+        [
+          553.0,
+          62.0
+        ],
+        [
+          844.0,
+          62.0
+        ],
+        [
+          844.0,
+          400.0
+        ],
+        [
+          553.0,
+          400.0
+        ]
+      ],
+      "capacity_note": "Area is approximate; no scale bar provided in the site plan."
+    },
+    {
+      "id": "zone_kitchen",
+      "name": "Kitchen",
+      "area_m2": 10.0,
+      "polygon_px": [
+        [
+          553.0,
+          400.0
+        ],
+        [
+          844.0,
+          400.0
+        ],
+        [
+          844.0,
+          937.0
+        ],
+        [
+          553.0,
+          937.0
+        ]
+      ],
+      "polygon_map": [
+        [
+          553.0,
+          400.0
+        ],
+        [
+          844.0,
+          400.0
+        ],
+        [
+          844.0,
+          937.0
+        ],
+        [
+          553.0,
+          937.0
+        ]
+      ],
+      "capacity_note": "Area is approximate; no scale bar provided in the site plan."
+    }
+  ],
+  "links": [
+    {
+      "id": "link_bedroom_hallway",
+      "from": "zone_bedroom",
+      "to": "zone_hallway",
+      "width_m": 0.85,
+      "kind": "opening",
+      "state": "open"
+    },
+    {
+      "id": "link_living_hallway",
+      "from": "zone_living_room",
+      "to": "zone_hallway",
+      "width_m": 0.85,
+      "kind": "opening",
+      "state": "open"
+    },
+    {
+      "id": "link_bathroom_hallway",
+      "from": "zone_bathroom",
+      "to": "zone_hallway",
+      "width_m": 0.75,
+      "kind": "opening",
+      "state": "open"
+    },
+    {
+      "id": "link_kitchen_hallway",
+      "from": "zone_kitchen",
+      "to": "zone_hallway",
+      "width_m": 0.85,
+      "kind": "opening",
+      "state": "open"
+    },
+    {
+      "id": "link_entrance_hallway",
+      "from": "outside",
+      "to": "zone_hallway",
+      "width_m": 0.9,
+      "kind": "opening",
+      "state": "open"
+    },
+    {
+      "id": "link_hallway_bedroom",
+      "from": "zone_hallway",
+      "to": "zone_bedroom",
+      "width_m": 0.85,
+      "kind": "opening",
+      "state": "open"
+    },
+    {
+      "id": "link_hallway_living",
+      "from": "zone_hallway",
+      "to": "zone_living_room",
+      "width_m": 0.85,
+      "kind": "opening",
+      "state": "open"
+    },
+    {
+      "id": "link_hallway_bathroom",
+      "from": "zone_hallway",
+      "to": "zone_bathroom",
+      "width_m": 0.75,
+      "kind": "opening",
+      "state": "open"
+    },
+    {
+      "id": "link_hallway_kitchen",
+      "from": "zone_hallway",
+      "to": "zone_kitchen",
+      "width_m": 0.85,
+      "kind": "opening",
+      "state": "open"
+    }
+  ],
+  "entries": [
+    {
+      "zone": "zone_hallway",
+      "name": "Main Entrance"
+    }
+  ],
+  "pa_zones": [],
+  "officers_total": 0
+}

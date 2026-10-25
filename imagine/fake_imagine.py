@@ -15,8 +15,11 @@ import threading
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from pathlib import Path
+import tempfile
 
 from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+
 from pydantic import ValidationError
 import base64
 import os
@@ -70,12 +73,19 @@ def validate_uploaded_image(contents: bytes) -> tuple[str, str]:
 
 logger = logging.getLogger(__name__)
 IMAGINE_DIR = Path(__file__).resolve().parent
+ACTIVE_VENUE_PATH = IMAGINE_DIR / "active_venue.json"
 
 # Explicit demo assumption: average arrivals per minute into each zone.
 # Only zones connected to an open outside-to-zone link can receive arrivals.
-DEMO_ARRIVAL_RATES_PER_MIN = {"A": 12.0, "B": 0.0, "C": 0.0, "D": 0.0}
+DEMO_ARRIVAL_RATE_PER_MIN = 12.0
 
-venue: Venue = load_venue()
+DEMO_VENUE_PATH = IMAGINE_DIR / "venue.json"
+
+venue: Venue = (
+    load_venue(ACTIVE_VENUE_PATH)
+    if ACTIVE_VENUE_PATH.exists()
+    else load_venue(DEMO_VENUE_PATH)
+)
 assumptions = load_assumptions()
 
 latest: Forecast | None = None
@@ -129,7 +139,14 @@ def make_forecast(
     """Generate a real forecast from the Monte Carlo simulator."""
     selected_venue = active_venue or venue
     counts = initial_counts if initial_counts is not None else current_initial_counts()
-    rates = arrival_rates if arrival_rates is not None else DEMO_ARRIVAL_RATES_PER_MIN
+    rates = arrival_rates if arrival_rates is not None else {
+        entry.zone: (
+            DEMO_ARRIVAL_RATE_PER_MIN
+            if entry.zone == selected_venue.entries[0].zone
+            else 0.0
+        )
+        for entry in selected_venue.entries
+    }
 
     return simulate(
         selected_venue,
@@ -250,6 +267,49 @@ def validate_generated_venue(generated_venue: Venue) -> None:
         )
 
 
+def save_active_venue(updated_venue: Venue) -> None:
+    """Validate and atomically save the active venue."""
+    validate_generated_venue(updated_venue)
+
+    # Ensure every venue-related collection remains consistent.
+    known_zone_ids = {zone.id for zone in updated_venue.zones}
+
+    # Serialize using the shared contract's field names.
+    venue_json = updated_venue.model_dump_json(by_alias=True, indent=2)
+
+    # Write to a temporary file first, then replace the active file.
+    ACTIVE_VENUE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=ACTIVE_VENUE_PATH.parent,
+            suffix=".tmp",
+            delete=False,
+        ) as temp_file:
+            temp_file.write(venue_json)
+            temp_path = Path(temp_file.name)
+
+        temp_path.replace(ACTIVE_VENUE_PATH)
+
+    except OSError as exc:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Could not save the active venue.",
+        ) from exc
+
+    # Activate the new venue and discard stale crowd counts.
+    global venue
+    with state_lock:
+        venue = updated_venue
+        stale_zone_ids = set(latest_states) - known_zone_ids
+        for zone_id in stale_zone_ids:
+            latest_states.pop(zone_id, None)
+
 
 def get_hold_durations(plan: Plan) -> dict[str, int]:
     """Map hold_inflow actions to their destination zones."""
@@ -346,12 +406,32 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Breathing Room Imagine API", lifespan=lifespan)
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_headers=["Content-Type"],
+)
 
 @app.get("/venue/{venue_id}")
 def get_venue(venue_id: str):
     if venue_id != venue.venue_id:
         raise HTTPException(status_code=404, detail="Venue not found")
+    return venue
+
+
+@app.put("/venue/{venue_id}", response_model=Venue)
+def update_venue(venue_id: str, updated_venue: Venue):
+    """Validate, save, and activate an edited venue."""
+    if venue_id != venue.venue_id:
+        raise HTTPException(status_code=404, detail="Venue not found")
+
+    try:
+        save_active_venue(updated_venue)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     return venue
 
 
@@ -432,11 +512,15 @@ async def twin_from_photo(file: UploadFile = File(...)):
             system=(
                 "You create venue digital twins from site-plan images. "
                 "Return only data matching the supplied Venue schema. "
+                "Every zone must have a strictly positive area_m2 value. "
+                "Never use zero, a negative number, or a missing value for area_m2. "
+                "Estimate plausible positive areas in square metres when exact "
+                "measurements are unavailable, and explain uncertainty in "
+                "capacity_note. Every link must have a strictly positive width_m. "
                 "Do not invent precise real-world measurements from pixels. "
-                "Estimate areas and widths conservatively, and explain "
-                "uncertain measurements in capacity_note. "
                 "Use unique zone IDs, connect links to valid zone IDs or "
-                "'outside', and keep polygons within the image bounds."
+                "'outside', and keep polygons within the image bounds. "
+                "Every polygon must contain at least three valid coordinate points."
             ),
             user=(
                 "Analyze this site plan and create a venue twin. "
@@ -457,6 +541,40 @@ async def twin_from_photo(file: UploadFile = File(...)):
 
     try:
         validate_generated_venue(generated_venue)
+        logger.info("Corrected venue passed validation.")
+    except ValueError as first_error:
+        # Ask the model to correct invalid venue data once.
+        try:
+            generated_venue = call_json(
+                role="vl",
+                purpose="venue_twin_correction",
+                system=(
+                    "Correct the supplied venue JSON. Every zone must have "
+                    "a strictly positive area_m2, every link must have a "
+                    "strictly positive width_m, all zone IDs must be unique, "
+                    "all links must reference valid zones or 'outside', and "
+                    "all polygons must contain at least three points. "
+                    "Preserve the venue layout and return valid JSON only."
+                ),
+                user=(
+                    f"The previous venue failed validation: {first_error}. "
+                    "Correct this venue data:\n"
+                    + generated_venue.model_dump_json(by_alias=True)
+                ),
+                schema=Venue,
+                temperature=0.0,
+            )
+            validate_generated_venue(generated_venue)
+        except Exception as exc:
+            logger.error("Venue correction error type: %s", type(exc).__name__)
+            logger.exception("Generated venue correction failed")
+            raise HTTPException(
+                status_code=422,
+                detail="The generated venue failed validation. Please try another site plan.",
+            ) from exc
+
+    try:
+        save_active_venue(generated_venue)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
