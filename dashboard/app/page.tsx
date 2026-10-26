@@ -49,6 +49,13 @@ type ForecastData = {
   zones: ForecastZone[];
 };
 
+type ScoreData = {
+  plan_id: string;
+  max_p_danger: number;
+  min_minutes_to_danger: number | null;
+  zones: ForecastZone[];
+};
+
 const zonePositions: Record<
   string,
   { x: number; y: number; w: number; h: number }
@@ -96,7 +103,6 @@ function formatTime(timestamp: string | undefined): string {
 
 export default function Home() {
   const [selectedZone, setSelectedZone] = useState("C");
-  const [showPlan, setShowPlan] = useState(false);
   const [editedVenue, setEditedVenue] = useState<VenueData | null>(null);
   const [savingVenue, setSavingVenue] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -104,6 +110,166 @@ export default function Home() {
   const [forecast, setForecast] = useState<ForecastData | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scoring, setScoring] = useState(false);
+  const [scoreError, setScoreError] = useState<string | null>(null);
+  const [baselineScore, setBaselineScore] = useState<ScoreData | null>(null);
+  const [planScore, setPlanScore] = useState<ScoreData | null>(null);
+  const [holdMinutes, setHoldMinutes] = useState(5);
+  const [comparisonScores, setComparisonScores] = useState<ScoreData[]>([]);
+  const [selectedGateId, setSelectedGateId] = useState("");
+  const [gateState, setGateState] = useState<"open" | "closed">("closed");
+  const [gateScore, setGateScore] = useState<ScoreData | null>(null);
+  const [gateScoring, setGateScoring] = useState(false);
+  
+  async function handleScoreIntervention() {
+    if (!venue) return;
+
+    const entryName = venue.entries[0]?.name;
+    if (!entryName) {
+      setScoreError("This venue has no configured entry to hold.");
+      return;
+    }
+
+    const durations = [2, 5, 10];
+    setScoring(true);
+    setScoreError(null);
+    setBaselineScore(null);
+    setPlanScore(null);
+    setComparisonScores([]);
+
+    try {
+      const baselineResponse = await fetch(`${API_URL}/score/baseline`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const baselineBody = await baselineResponse.json().catch(() => null);
+      if (!baselineResponse.ok) {
+        throw new Error(
+          baselineBody?.detail ??
+            `Baseline scoring failed (${baselineResponse.status}).`
+        );
+      }
+
+      const baseline = baselineBody as ScoreData;
+      const results = await Promise.all(
+        durations.map(async (minutes) => {
+          const plan = {
+            plan_id: `hold-arrivals-${minutes}-min`,
+            strategy: `Hold arrivals for ${minutes} minutes`,
+            why: `Evaluate whether a ${minutes}-minute pause in incoming arrivals changes forecast danger.`,
+            actions: [{ type: "hold_inflow", entry: entryName, minutes }],
+          };
+          const response = await fetch(`${API_URL}/score`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plan }),
+          });
+          const body = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(
+              body?.detail ?? `The ${minutes}-minute plan failed (${response.status}).`
+            );
+          }
+          return body as ScoreData;
+        })
+      );
+
+      setBaselineScore(baseline);
+      setComparisonScores(results);
+      setPlanScore(
+        results.find((result) => result.plan_id === `hold-arrivals-${holdMinutes}-min`) ??
+          results[1]
+      );
+    } catch (error) {
+      setScoreError(
+        error instanceof Error
+          ? error.message
+          : "Could not score the intervention scenarios."
+      );
+    } finally {
+      setScoring(false);
+    }
+  }
+
+async function handleScoreGateIntervention() {
+  if (!venue) return;
+
+  if (!selectedGateId) {
+    setScoreError("Please select a gate/link first.");
+    return;
+  }
+
+  const selectedGate = venue.links.find(
+    (link) => link.id === selectedGateId
+  );
+
+  if (!selectedGate) {
+    setScoreError("The selected gate/link was not found.");
+    return;
+  }
+
+  setGateScoring(true);
+  setScoreError(null);
+  setGateScore(null);
+
+  try {
+    const baselineResponse = await fetch(`${API_URL}/score/baseline`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const baselineBody = await baselineResponse.json().catch(() => null);
+
+    if (!baselineResponse.ok) {
+      throw new Error(
+        baselineBody?.detail ??
+          `Baseline scoring failed (${baselineResponse.status}).`
+      );
+    }
+
+    const plan = {
+      plan_id: `gate-${selectedGateId}-${gateState}`,
+      strategy: `${gateState === "closed" ? "Close" : "Open"} link ${selectedGateId}`,
+      why: `Evaluate the forecast with link ${selectedGateId} set to ${gateState}.`,
+      actions: [
+        {
+          type: "gate",
+          link: selectedGateId,
+          state: gateState,
+        },
+      ],
+    };
+
+    const response = await fetch(`${API_URL}/score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
+
+    const body = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        body?.detail ?? `Gate scoring failed (${response.status}).`
+      );
+    }
+
+    setBaselineScore(baselineBody as ScoreData);
+    setGateScore(body as ScoreData);
+  } catch (error) {
+    setScoreError(
+      error instanceof Error
+        ? error.message
+        : "Could not score the gate intervention."
+    );
+  } finally {
+    setGateScoring(false);
+  }
+}
+
+
   async function handleSaveVenue() {
     if (!editedVenue || !venue) return;
 
@@ -289,12 +455,6 @@ export default function Home() {
             </p>
           </div>
 
-          <button
-            onClick={() => setShowPlan((current) => !current)}
-            className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200"
-          >
-            {showPlan ? "Hide plan preview" : "Preview intervention"}
-          </button>
         </div>
 
         {apiError && (
@@ -615,47 +775,266 @@ export default function Home() {
             </article>
 
             <article className="rounded-2xl border border-white/10 bg-[#0e1624] p-5">
-              <h3 className="font-semibold">Intervention preview</h3>
+              <h3 className="font-semibold">Intervention scoring</h3>
               <p className="mt-1 text-xs text-slate-400">
-                Illustrative actions only; not sent to the planner
+                Compare 2-, 5-, and 10-minute arrival holds against one shared baseline.
               </p>
 
-              {showPlan ? (
-                <div className="mt-4 space-y-3 text-sm">
-                  <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3">
-                    <p className="font-medium text-cyan-200">
-                      01 · Review arrival control
-                    </p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      Evaluate whether temporarily holding new arrivals could
-                      reduce pressure on the entrance.
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3">
-                    <p className="font-medium text-cyan-200">
-                      02 · Review alternate routes
-                    </p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      Check whether the side exit and connecting routes are
-                      available before proposing a change.
-                    </p>
-                  </div>
-                  <p className="text-xs text-amber-300">
-                    Preview only. No action has been scored, approved, or
-                    executed.
-                  </p>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowPlan(true)}
-                  className="mt-4 w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-slate-300 transition hover:bg-white/5"
+              <div className="mt-4 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3">
+                <label htmlFor="hold-duration" className="mb-2 block text-sm font-medium text-cyan-200">
+                  Show zone details for
+                </label>
+                <select
+                  id="hold-duration"
+                  value={holdMinutes}
+                  onChange={(event) => {
+                    const minutes = Number(event.target.value);
+                    setHoldMinutes(minutes);
+                    const selected = comparisonScores.find(
+                      (result) => result.plan_id === `hold-arrivals-${minutes}-min`
+                    );
+                    if (selected) setPlanScore(selected);
+                  }}
+                  disabled={scoring}
+                  className="w-full rounded-lg border border-white/10 bg-[#0e1624] px-3 py-2 text-sm text-white outline-none focus:border-cyan-300 disabled:opacity-50"
                 >
-                  Show example actions
-                </button>
+                  <option value={2}>2 minutes</option>
+                  <option value={5}>5 minutes</option>
+                  <option value={10}>10 minutes</option>
+                </select>
+                <p className="mt-2 text-xs text-slate-400">
+                  Entry: {venue?.entries[0]?.name ?? "No entry configured"} · Simulation only; no action is executed.
+                </p>
+              </div>
+
+              <button
+                onClick={handleScoreIntervention}
+                disabled={!venue || scoring}
+                className="mt-4 w-full rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {scoring ? "Scoring all three plans..." : "Compare all 3 plans"}
+              </button>
+
+              {scoreError && <p className="mt-3 text-sm text-red-300" role="alert">{scoreError}</p>}
+
+              {baselineScore && comparisonScores.length > 0 && (
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <h4 className="font-medium">Plan comparison</h4>
+                    <p className="mt-1 text-xs text-slate-400">All three plans use the same baseline forecast.</p>
+                  </div>
+                  <div className="overflow-x-auto rounded-xl border border-white/10">
+                    <table className="w-full min-w-[440px] text-left text-xs">
+                      <thead className="bg-white/[0.03] text-slate-400">
+                        <tr>
+                          <th className="p-3 font-medium">Plan</th>
+                          <th className="p-3 text-right font-medium">Max danger</th>
+                          <th className="p-3 text-right font-medium">Change</th>
+                          <th className="p-3 text-right font-medium">Time to danger</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparisonScores.map((result) => {
+                          const change = (result.max_p_danger - baselineScore.max_p_danger) * 100;
+                          const match = result.plan_id.match(/hold-arrivals-(\d+)-min/);
+                          const minutes = match ? Number(match[1]) : 5;
+                          const isSelected = minutes === holdMinutes;
+                          return (
+                            <tr key={result.plan_id} className={`border-t border-white/5 ${isSelected ? "bg-cyan-300/[0.07]" : ""}`}>
+                              <td className="p-3">
+                                <button type="button" onClick={() => { setHoldMinutes(minutes); setPlanScore(result); }} className="text-left text-slate-200 hover:text-cyan-200">
+                                  {minutes} min {isSelected ? "• Selected" : ""}
+                                </button>
+                              </td>
+                              <td className="p-3 text-right tabular-nums">{(result.max_p_danger * 100).toFixed(1)}%</td>
+                              <td className={`p-3 text-right tabular-nums ${change < -0.05 ? "text-emerald-300" : change > 0.05 ? "text-red-300" : "text-slate-300"}`}>
+                                {change > 0 ? "+" : ""}{change.toFixed(1)} pp
+                              </td>
+                              <td className="p-3 text-right tabular-nums">
+                                {result.min_minutes_to_danger == null ? "Not reached" : `${result.min_minutes_to_danger.toFixed(1)} min`}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {planScore && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-xl border border-white/10 p-3">
+                          <p className="text-xs text-slate-400">Baseline max danger</p>
+                          <p className="mt-1 text-2xl font-semibold">{(baselineScore.max_p_danger * 100).toFixed(1)}%</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 p-3">
+                          <p className="text-xs text-slate-400">{holdMinutes}-minute plan max danger</p>
+                          <p className="mt-1 text-2xl font-semibold">{(planScore.max_p_danger * 100).toFixed(1)}%</p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-white/10 p-3">
+                        <h4 className="font-medium">Zone-by-zone comparison · {holdMinutes}-minute plan</h4>
+                        <div className="mt-3 overflow-x-auto">
+                          <table className="w-full min-w-[420px] text-left text-xs">
+                            <thead className="text-slate-400">
+                              <tr className="border-b border-white/10">
+                                <th className="pb-2 pr-3 font-medium">Zone</th>
+                                <th className="px-2 pb-2 text-right font-medium">Baseline</th>
+                                <th className="px-2 pb-2 text-right font-medium">Plan</th>
+                                <th className="pb-2 pl-2 text-right font-medium">Change</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Array.from(new Set([...baselineScore.zones.map((zone) => zone.zone), ...planScore.zones.map((zone) => zone.zone)])).map((zoneId) => {
+                                const before = baselineScore.zones.find((zone) => zone.zone === zoneId);
+                                const after = planScore.zones.find((zone) => zone.zone === zoneId);
+                                const zoneChange = before && after ? (after.p_danger - before.p_danger) * 100 : null;
+                                const zoneName = venue?.zones.find((zone) => zone.id === zoneId)?.name ?? zoneId;
+                                const status = zoneChange === null ? "Unavailable" : zoneChange < -0.05 ? "Improved" : zoneChange > 0.05 ? "Worsened" : "No material change";
+                                return (
+                                  <tr key={zoneId} className="border-b border-white/5 last:border-0">
+                                    <td className="py-2 pr-3 text-slate-200">{zoneName}<div className="mt-1 text-[10px] text-slate-500">{status}</div></td>
+                                    <td className="px-2 py-2 text-right tabular-nums">{before ? `${(before.p_danger * 100).toFixed(1)}%` : "—"}</td>
+                                    <td className="px-2 py-2 text-right tabular-nums">{after ? `${(after.p_danger * 100).toFixed(1)}%` : "—"}</td>
+                                    <td className="py-2 pl-2 text-right tabular-nums">{zoneChange === null ? "—" : `${zoneChange > 0 ? "+" : ""}${zoneChange.toFixed(1)} pp`}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-xs text-slate-400">Baseline time to danger</p>
+                            <p className="mt-1 font-semibold">{baselineScore.min_minutes_to_danger == null ? "Not reached" : `${baselineScore.min_minutes_to_danger.toFixed(1)} min`}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400">Selected plan time to danger</p>
+                            <p className="mt-1 font-semibold">{planScore.min_minutes_to_danger == null ? "Not reached" : `${planScore.min_minutes_to_danger.toFixed(1)} min`}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <p className="text-xs text-amber-300">Simulation only. These results do not execute or authorize real-world actions. A lower maximum danger probability does not guarantee every zone is safer.</p>
+                </div>
               )}
             </article>
           </div>
         </section>
+        
+        <section className="rounded-xl border p-4 space-y-4">
+          <h3 className="text-lg font-semibold">Gate Intervention</h3>
+
+          <p className="text-sm opacity-75">
+            Evaluate how opening or closing a link affects forecast risk.
+          </p>
+
+          <div className="space-y-2">
+            <label htmlFor="gate-select" className="block text-sm font-medium">
+              Select gate/link
+            </label>
+
+            <select
+              id="gate-select"
+              value={selectedGateId}
+              onChange={(event) => setSelectedGateId(event.target.value)}
+              className="w-full rounded-md border border-slate-600 bg-slate-900 p-2 text-white"
+            >
+              <option value="">Choose a link...</option>
+              {venue?.links.map((link) => (
+                <option key={link.id} value={link.id}>
+                  {link.id}: {link.from} → {link.to} ({link.state})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="gate-state" className="block text-sm font-medium">
+              Evaluate link as
+            </label>
+
+            <select
+              id="gate-state"
+              value={gateState}
+              onChange={(event) =>
+                setGateState(event.target.value as "open" | "closed")
+              }
+              className="w-full rounded-md border border-slate-600 bg-slate-900 p-2 text-white"
+            >
+              <option value="closed">Closed</option>
+              <option value="open">Open</option>
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleScoreGateIntervention}
+            disabled={gateScoring || !selectedGateId}
+            className="rounded-md border px-4 py-2 disabled:opacity-50"
+          >
+            {gateScoring ? "Scoring gate..." : "Score Gate Intervention"}
+          </button>
+
+          {gateScore && baselineScore && (
+            <div className="space-y-3">
+              <h4 className="font-semibold">Forecast comparison</h4>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border p-3">
+                  <p className="text-sm opacity-75">Baseline maximum danger</p>
+                  <p className="text-xl font-semibold">
+                    {(baselineScore.max_p_danger * 100).toFixed(1)}%
+                  </p>
+                </div>
+
+                <div className="rounded-lg border p-3">
+                  <p className="text-sm opacity-75">Gate plan maximum danger</p>
+                  <p className="text-xl font-semibold">
+                    {(gateScore.max_p_danger * 100).toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm">
+                Change in maximum danger:{" "}
+                {(
+                  (gateScore.max_p_danger - baselineScore.max_p_danger) *
+                  100
+                ).toFixed(1)}
+                percentage points
+              </p>
+
+              <h4 className="font-semibold">Zone-by-zone comparison</h4>
+
+              <div className="space-y-2">
+                {gateScore.zones.map((zone) => {
+                  const baselineZone = baselineScore.zones.find(
+                    (item) => item.zone === zone.zone
+                  );
+
+                  return (
+                    <div key={zone.zone} className="rounded-lg border p-3">
+                      <p className="font-medium">{zone.zone}</p>
+                      <p className="text-sm">
+                        Baseline:{" "}
+                        {baselineZone
+                          ? `${(baselineZone.p_danger * 100).toFixed(1)}%`
+                          : "N/A"}
+                      </p>
+                      <p className="text-sm">
+                        Gate plan: {(zone.p_danger * 100).toFixed(1)}%
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* Venue Editor */}
         <section className="mt-6 rounded-2xl border border-white/10 bg-[#0e1624] p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
