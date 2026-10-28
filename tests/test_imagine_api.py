@@ -311,3 +311,30 @@ def test_update_venue_saves_and_activates_venue(tmp_path, monkeypatch):
     assert response.json()["name"] == "Updated Demo Venue"
     assert fake_imagine.venue.name == "Updated Demo Venue"
     assert (tmp_path / "active_venue.json").exists()
+
+def test_score_rejects_gate_closure_that_disconnects_zone(monkeypatch):
+    from fastapi.testclient import TestClient
+    from imagine import fake_imagine
+    from imagine.sim import load_venue
+
+    monkeypatch.setattr(fake_imagine, "venue", load_venue())
+
+    plan = {
+        "plan_id": "unsafe-close-g3",
+        "strategy": "Close the only route to zone C",
+        "actions": [
+            {
+                "type": "gate",
+                "link": "G3",
+                "state": "closed",
+            }
+        ],
+        "why": "Regression test for disconnected zones.",
+    }
+
+    with TestClient(fake_imagine.app) as client:
+        response = client.post("/score", json={"plan": plan})
+
+    assert response.status_code == 400
+    assert "outside route" in response.json()["detail"]
+    assert "C" in response.json()["detail"]

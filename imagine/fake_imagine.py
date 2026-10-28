@@ -19,7 +19,7 @@ import tempfile
 
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-
+from common.gate_safety import validate_gate_safety
 from pydantic import ValidationError
 import base64
 import os
@@ -485,6 +485,7 @@ def score(body: dict):
     try:
         plan_data = body.get("plan", body)
         plan = Plan.model_validate(plan_data)
+        validate_gate_safety(plan, venue)
         planned_venue = apply_plan_to_venue(plan)
         hold_durations = get_hold_durations(plan, active_venue=planned_venue)
         announce_zones = get_announcement_zones(plan)

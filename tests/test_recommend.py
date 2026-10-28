@@ -84,7 +84,7 @@ def test_unsafe_gate_closure_is_rejected(venue):
         )
 
         try:
-            recommendation._validate_gate_safety(plan, venue)
+            recommendation.validate_gate_safety(plan, venue)
         except ValueError as exc:
             if "disconnect" in str(exc).lower():
                 return

@@ -10,6 +10,7 @@ from common.contracts import (
     ScoreResult,
     Venue,
 )
+from common.gate_safety import validate_gate_safety
 from common.llm import call_json
 from imagine.fake_imagine import (
     apply_plan_to_venue,
@@ -39,63 +40,8 @@ class RecommendationResponse(BaseModel):
     recommended_plan_id: str
     candidates_considered: int
     recommendations: list[RankedPlan]
+    generation_source: str = "ai"
 
-
-
-def _validate_gate_safety(plan: Plan, venue: Venue) -> None:
-    """Reject gate closures that disconnect zones from an existing outside route."""
-    zone_ids = {zone.id for zone in venue.zones}
-    links = venue.links
-
-    # Find external endpoints, such as "outside".
-    external_nodes = {
-        endpoint
-        for link in links
-        for endpoint in (link.from_zone, link.to_zone)
-        if endpoint not in zone_ids
-    }
-
-    if not external_nodes:
-        return
-
-    closed_by_plan = {
-        action.link
-        for action in plan.actions
-        if action.type == "gate" and action.state == "closed"
-    }
-
-    def reachable_zone_ids(excluded_links: set[str]) -> set[str]:
-        adjacency: dict[str, set[str]] = {}
-
-        for link in links:
-            if link.state != "open" or link.id in excluded_links:
-                continue
-
-            adjacency.setdefault(link.from_zone, set()).add(link.to_zone)
-            adjacency.setdefault(link.to_zone, set()).add(link.from_zone)
-
-        reached = set(external_nodes)
-        pending = list(external_nodes)
-
-        while pending:
-            node = pending.pop()
-            for neighbour in adjacency.get(node, set()):
-                if neighbour not in reached:
-                    reached.add(neighbour)
-                    pending.append(neighbour)
-
-        return reached & zone_ids
-
-    baseline_reachable = reachable_zone_ids(set())
-    planned_reachable = reachable_zone_ids(closed_by_plan)
-
-    disconnected = baseline_reachable - planned_reachable
-
-    if disconnected:
-        raise ValueError(
-            "Gate closure would disconnect these zones from an existing "
-            f"outside route: {sorted(disconnected)}"
-        )
 
 def _normalize_entry_name(value: str) -> str:
     """Normalize common punctuation mistakes in AI-generated entry names."""
@@ -182,7 +128,7 @@ def _validate_plan(plan: Plan, venue: Venue) -> None:
 
     # Also validate gate action application using the existing simulator helper.
 
-    _validate_gate_safety(plan, venue)
+    validate_gate_safety(plan, venue)
     apply_plan_to_venue(plan, active_venue=venue)
 
 
@@ -350,7 +296,10 @@ def _generate_candidates(
             "duration from 1 to 20. Do not close a gate if that disconnects "
             "occupied zones. Use only resources present in the venue."
         )
-
+    rejected.append({
+        "source": "fallback",
+        "reason": "AI generation did not produce three valid plans.",
+    })
     # Reliable fallback: three different hold durations using a real entry.
     if not selected_venue.entries:
         raise HTTPException(
@@ -395,6 +344,7 @@ def _generate_candidates(
 def recommend(body: RecommendationRequest):
     """Generate or rank candidates and return a recommendation only."""
     selected_venue = body.venue or active_venue
+    generation_source = "user_supplied" if body.candidates is not None else "ai"
 
     try:
         if body.candidates is not None:
@@ -426,6 +376,11 @@ def recommend(body: RecommendationRequest):
                 context=context,
                 selected_venue=selected_venue,
             )
+            if any(
+                item.get("source") == "fallback"
+                for item in generation_rejections
+            ):
+                generation_source = "fallback"
 
         if not candidates.plans:
             raise ValueError("No candidate plans were supplied.")
@@ -507,6 +462,7 @@ def recommend(body: RecommendationRequest):
             recommended_plan_id=ranked[0].plan.plan_id,
             candidates_considered=len(ranked),
             recommendations=ranked,
+            generation_source=generation_source,
         )
 
     except (ValueError, RuntimeError) as exc:
