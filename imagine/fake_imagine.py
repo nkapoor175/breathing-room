@@ -321,10 +321,20 @@ def get_hold_durations(plan: Plan) -> dict[str, int]:
         if action.type != "hold_inflow":
             continue
 
-        if not action.entry or action.entry not in entries:
+        valid_entry_names = {
+            str(entry).strip().casefold()
+            for entry in entries
+        }
+
+        if (
+            not isinstance(action.entry, str)
+            or action.entry.strip().casefold() not in valid_entry_names
+        ):
             raise ValueError(
-                f"Unknown entry for hold_inflow action: {action.entry}"
+                f"Unknown entry for hold_inflow action: {action.entry!r}. "
+                f"Valid entries: {sorted(entries)!r}"
             )
+
 
         if action.minutes is None or action.minutes < 0:
             raise ValueError(
@@ -413,6 +423,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
+from act.recommend import router as recommendation_router
+
+app.include_router(recommendation_router)
 
 @app.get("/venue/{venue_id}")
 def get_venue(venue_id: str):

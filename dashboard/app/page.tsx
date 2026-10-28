@@ -56,6 +56,39 @@ type ScoreData = {
   zones: ForecastZone[];
 };
 
+
+type RecommendedPlan = {
+  plan: {
+    plan_id: string;
+    strategy: string;
+    actions: {
+      type: string;
+      count?: number | null;
+      from_zone?: string | null;
+      to_zone?: string | null;
+      link?: string | null;
+      state?: string | null;
+      entry?: string | null;
+      zone?: string | null;
+      minutes?: number | null;
+      langs?: string[] | null;
+      text?: string | null;
+    }[];
+    why: string;
+  };
+  score: ScoreData;
+  rank: number;
+  explanation: string;
+};
+
+type RecommendationData = {
+  baseline: ScoreData;
+  recommended_plan_id: string;
+  candidates_considered: number;
+  recommendations: RecommendedPlan[];
+};
+
+
 const zonePositions: Record<
   string,
   { x: number; y: number; w: number; h: number }
@@ -120,7 +153,10 @@ export default function Home() {
   const [gateState, setGateState] = useState<"open" | "closed">("closed");
   const [gateScore, setGateScore] = useState<ScoreData | null>(null);
   const [gateScoring, setGateScoring] = useState(false);
-  
+  const [recommendations, setRecommendations] = useState<RecommendationData | null>(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);  
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
+
   async function handleScoreIntervention() {
     if (!venue) return;
 
@@ -269,6 +305,53 @@ async function handleScoreGateIntervention() {
   }
 }
 
+  
+  async function handleGetRecommendations() {
+    setRecommendationLoading(true);
+    setRecommendationError(null);
+    setRecommendations(null);
+
+    try {
+      const response = await fetch(`${API_URL}/recommend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      const body = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const detail = body?.detail;
+        throw new Error(
+          typeof detail === "string"
+            ? detail
+            : detail
+              ? JSON.stringify(detail)
+              : `Recommendation request failed (${response.status}).`
+        );
+      }
+
+      if (
+        !body ||
+        !Array.isArray(body.recommendations) ||
+        !body.baseline
+      ) {
+        throw new Error(
+          "The API response is missing baseline or recommendations data."
+        );
+      }
+
+      setRecommendations(body as RecommendationData);
+    } catch (error) {
+      setRecommendationError(
+        error instanceof Error
+          ? error.message
+          : "Could not load AI recommendations."
+      );
+    } finally {
+      setRecommendationLoading(false);
+    }
+  }
 
   async function handleSaveVenue() {
     if (!editedVenue || !venue) return;
@@ -924,6 +1007,203 @@ async function handleScoreGateIntervention() {
           </div>
         </section>
         
+        
+        <section className="mt-6 rounded-2xl border border-white/10 bg-[#0e1624] p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-cyan-300">
+                AI planning
+              </p>
+              <h3 className="mt-2 text-xl font-semibold">
+                Ranked recommendations
+              </h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Generate candidate interventions, simulate their forecast outcomes,
+                and compare them with baseline risk.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGetRecommendations}
+              disabled={recommendationLoading}
+              className="rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {recommendationLoading
+                ? "Generating plans..."
+                : "Generate recommendations"}
+            </button>
+          </div>
+
+        {recommendationError && (
+          <div
+              role="alert"
+              className="mt-4 rounded-xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200"
+            >
+              {recommendationError}
+            </div>
+          )}
+
+          {recommendationLoading && (
+            <p className="mt-4 text-sm text-slate-400">
+              The AI planner is generating candidate plans and scoring their simulated
+              outcomes. This may take a little while.
+            </p>
+          )}
+
+          {recommendations && (
+            <div className="mt-6 space-y-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-white/10 p-4">
+                  <p className="text-xs text-slate-400">Baseline maximum danger</p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {(recommendations.baseline.max_p_danger * 100).toFixed(1)}%
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 p-4">
+                  <p className="text-xs text-slate-400">Candidates considered</p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {recommendations.candidates_considered}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 p-4">
+                  <p className="text-xs text-slate-400">Recommended plan</p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {recommendations.recommended_plan_id}
+                  </p>
+                </div>
+              </div>
+
+              {recommendations.recommendations.length === 0 && (
+                <p className="text-sm text-amber-300">
+                  The API returned no ranked plans. Check the backend response.
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                {recommendations.recommendations.map((item) => {
+                  const baselineRisk =
+                    recommendations.baseline.max_p_danger;
+                  const planRisk = item.score.max_p_danger;
+                  const change = (planRisk - baselineRisk) * 100;
+                  const isRecommended =
+                    item.plan.plan_id === recommendations.recommended_plan_id;
+
+                  return (
+                    <article
+                      key={item.plan.plan_id}
+                      className={`rounded-xl border p-4 ${
+                        isRecommended
+                          ? "border-cyan-300/50 bg-cyan-300/[0.06]"
+                          : "border-white/10 bg-white/[0.02]"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          Rank {item.rank}
+                        </span>
+
+                        {isRecommended && (
+                          <span className="rounded-full border border-cyan-300/30 px-2 py-1 text-xs text-cyan-200">
+                            Top recommendation
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="mt-3 font-semibold">
+                        {item.plan.strategy}
+                      </h4>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {item.plan.plan_id}
+                      </p>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-slate-400">Max danger</p>
+                          <p className="mt-1 text-xl font-semibold">
+                            {(planRisk * 100).toFixed(1)}%
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400">Vs baseline</p>
+                          <p
+                            className={`mt-1 text-xl font-semibold ${
+                              change < -0.05
+                                ? "text-emerald-300"
+                                : change > 0.05
+                                  ? "text-red-300"
+                                  : "text-slate-200"
+                            }`}
+                          >
+                            {change > 0 ? "+" : ""}
+                            {change.toFixed(1)} pp
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="mt-3 text-sm text-slate-300">
+                        {item.explanation || item.plan.why}
+                      </p>
+
+                      <h5 className="mt-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Proposed actions
+                      </h5>
+
+                      {item.plan.actions.length === 0 ? (
+                        <p className="mt-2 text-sm text-slate-400">
+                          No intervention proposed.
+                        </p>
+                      ) : (
+                        <ul className="mt-2 space-y-2">
+                          {item.plan.actions.map((action, index) => (
+                            <li
+                              key={`${item.plan.plan_id}-${index}`}
+                              className="rounded-lg bg-white/[0.04] p-3 text-sm"
+                            >
+                              <p className="font-medium">
+                                {action.type.replaceAll("_", " ")}
+                              </p>
+                              <p className="mt-1 break-words text-xs text-slate-400">
+                                {action.type === "hold_inflow"
+                                  ? `Entry: ${action.entry ?? "—"} · ${action.minutes ?? "—"} minutes`
+                                  : action.type === "gate"
+                                    ? `Link: ${action.link ?? "—"} · State: ${action.state ?? "—"}`
+                                    : action.type === "move_officers"
+                                      ? `${action.count ?? "—"} officers: ${action.from_zone ?? "—"} → ${action.to_zone ?? "—"}`
+                                      : action.type === "announce"
+                                        ? `Zone: ${action.zone ?? "—"} · ${action.text ?? ""}`
+                                        : "Review action details"}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <div className="mt-4 border-t border-white/10 pt-3 text-xs text-slate-400">
+                        <p>
+                          Time to danger:{" "}
+                          {item.score.min_minutes_to_danger == null
+                            ? "Not reached"
+                            : `${item.score.min_minutes_to_danger.toFixed(1)} min`}
+                        </p>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <p className="text-xs text-amber-300">
+                Simulation only. These are model-generated recommendations, not
+                authorization to execute real-world actions. A lower maximum danger
+                probability does not guarantee every zone is safer.
+              </p>
+            </div>
+          )}
+        </section>
+
+
         <section className="rounded-xl border p-4 space-y-4">
           <h3 className="text-lg font-semibold">Gate Intervention</h3>
 
