@@ -85,6 +85,7 @@ type RecommendationData = {
   baseline: ScoreData;
   recommended_plan_id: string;
   candidates_considered: number;
+  generation_source: "ai" | "fallback" | "user_supplied";
   recommendations: RecommendedPlan[];
 };
 
@@ -1063,10 +1064,21 @@ async function handleScoreGateIntervention() {
 
                 <div className="rounded-xl border border-white/10 p-4">
                   <p className="text-xs text-slate-400">Candidates considered</p>
-                  <p className="mt-2 text-2xl font-semibold">
-                    {recommendations.candidates_considered}
-                  </p>
-                </div>
+
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <p className="text-2xl font-semibold">
+                      {recommendations.candidates_considered}
+                    </p>
+
+                    <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700">
+                      {recommendations.generation_source === "fallback"
+                        ? "Fallback plans"
+                        : recommendations.generation_source === "user_supplied"
+                          ? "User-supplied plans"
+                          : "AI-generated plans"}
+                      </span>
+                    </div>
+                  </div>
 
                 <div className="rounded-xl border border-white/10 p-4">
                   <p className="text-xs text-slate-400">Recommended plan</p>
