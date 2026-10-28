@@ -176,10 +176,15 @@ def score_forecast(plan_id: str, forecast: Forecast) -> ScoreResult:
     )
 
 
-def apply_plan_to_venue(plan: Plan) -> Venue:
-    """Apply supported gate actions to a copy of the venue."""
-    planned_venue = Venue.model_validate(venue.model_dump(by_alias=True))
-
+def apply_plan_to_venue(
+    plan: Plan,
+    active_venue: Venue | None = None,
+) -> Venue:
+    """Apply supported gate actions to a copy of the selected venue."""
+    selected_venue = active_venue or venue
+    planned_venue = Venue.model_validate(
+        selected_venue.model_dump(by_alias=True)
+    )
     known_links = {link.id for link in planned_venue.links}
     for action in plan.actions:
         if action.type != "gate":
@@ -311,43 +316,50 @@ def save_active_venue(updated_venue: Venue) -> None:
             latest_states.pop(zone_id, None)
 
 
-def get_hold_durations(plan: Plan) -> dict[str, int]:
-    """Map hold_inflow actions to their destination zones."""
+def get_hold_durations(
+    plan: Plan,
+    active_venue: Venue | None = None,
+) -> dict[str, int]:
+    """Map hold_inflow actions to zones in the selected venue."""
+    selected_venue = active_venue or venue
     durations: dict[str, int] = {}
 
-    entries = {entry.name: entry.zone for entry in venue.entries}
+    entries = {
+        entry.name.strip().casefold(): entry.zone
+        for entry in selected_venue.entries
+    }
 
     for action in plan.actions:
         if action.type != "hold_inflow":
             continue
 
-        valid_entry_names = {
-            str(entry).strip().casefold()
-            for entry in entries
-        }
+        if not action.entry:
+            raise ValueError("hold_inflow actions must specify an entry")
+
+        entry_key = action.entry.strip().casefold()
+        if entry_key not in entries:
+            raise ValueError(f"Unknown entry: {action.entry!r}")
+
+        zone_id = entries[entry_key]
+
+        if action.zone is not None and action.zone != zone_id:
+            raise ValueError(
+                f"Entry {action.entry!r} belongs to zone {zone_id!r}, "
+                f"not {action.zone!r}."
+            )
 
         if (
-            not isinstance(action.entry, str)
-            or action.entry.strip().casefold() not in valid_entry_names
+            action.minutes is None
+            or isinstance(action.minutes, bool)
+            or not isinstance(action.minutes, int)
+            or action.minutes < 0
         ):
-            raise ValueError(
-                f"Unknown entry for hold_inflow action: {action.entry!r}. "
-                f"Valid entries: {sorted(entries)!r}"
-            )
+            raise ValueError("Hold durations must be non-negative integers")
 
-
-        if action.minutes is None or action.minutes < 0:
-            raise ValueError(
-                "hold_inflow action must specify non-negative minutes"
-            )
-
-        zone_id = entries[action.entry]
-        durations[zone_id] = max(
-            durations.get(zone_id, 0),
-            action.minutes,
-        )
+        durations[zone_id] = action.minutes
 
     return durations
+
 
 
 def get_announcement_zones(plan: Plan) -> list[str]:
@@ -474,7 +486,7 @@ def score(body: dict):
         plan_data = body.get("plan", body)
         plan = Plan.model_validate(plan_data)
         planned_venue = apply_plan_to_venue(plan)
-        hold_durations = get_hold_durations(plan)
+        hold_durations = get_hold_durations(plan, active_venue=planned_venue)
         announce_zones = get_announcement_zones(plan)
 
         forecast = make_forecast(

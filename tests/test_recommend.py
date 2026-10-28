@@ -133,3 +133,31 @@ def test_candidate_fallback_produces_three_valid_hold_plans(
 
     for plan in candidates.plans:
         recommendation._validate_plan(plan, venue)
+
+
+def test_hold_durations_use_selected_venue(venue):
+    from imagine.fake_imagine import get_hold_durations
+    from common.contracts import Entry, Plan, Action
+
+    custom_venue = venue.model_copy(deep=True)
+    custom_venue.entries = [
+        Entry(name="Side Entrance", zone=custom_venue.zones[-1].id)
+    ]
+
+    plan = Plan(
+        plan_id="custom-entry",
+        strategy="Hold side entrance",
+        actions=[
+            Action(
+                type="hold_inflow",
+                entry="Side Entrance",
+                zone=custom_venue.zones[-1].id,
+                minutes=5,
+            )
+        ],
+        why="Test selected venue mapping",
+    )
+
+    assert get_hold_durations(
+        plan, active_venue=custom_venue
+    ) == {custom_venue.zones[-1].id: 5}

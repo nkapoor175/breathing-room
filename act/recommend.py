@@ -183,7 +183,7 @@ def _validate_plan(plan: Plan, venue: Venue) -> None:
     # Also validate gate action application using the existing simulator helper.
 
     _validate_gate_safety(plan, venue)
-    apply_plan_to_venue(plan)
+    apply_plan_to_venue(plan, active_venue=venue)
 
 
 
