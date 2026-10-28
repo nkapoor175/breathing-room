@@ -161,3 +161,27 @@ def test_hold_durations_use_selected_venue(venue):
     assert get_hold_durations(
         plan, active_venue=custom_venue
     ) == {custom_venue.zones[-1].id: 5}
+
+
+def test_candidate_fallback_when_ai_generation_fails(
+    monkeypatch, venue
+):
+    def fail_generation(**kwargs):
+        raise RuntimeError("Simulated AI service failure")
+
+    monkeypatch.setattr(
+        recommendation,
+        "call_json",
+        fail_generation,
+    )
+
+    candidates, rejected = recommendation._generate_candidates(
+        system_prompt="test",
+        context={},
+        selected_venue=venue,
+    )
+
+    assert [p.plan_id for p in candidates.plans] == ["P1", "P2", "P3"]
+    assert [
+        p.actions[0].minutes for p in candidates.plans
+    ] == [3, 6, 10]

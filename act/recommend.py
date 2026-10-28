@@ -308,14 +308,23 @@ def _generate_candidates(
 
     # Try the AI twice, repairing incomplete hold actions each time.
     for attempt in range(2):
-        candidates = call_json(
-            role="super",
-            purpose="recommend",
-            system=system_prompt,
-            user=json.dumps(prompt_context),
-            schema=PlanCandidates,
-            retries=1,
-        )
+        try:
+            candidates = call_json(
+                role="super",
+                purpose="recommend",
+                system=system_prompt,
+                user=json.dumps(prompt_context),
+                response_model=PlanCandidates,
+            )
+        except Exception as exc:
+            rejected.append(
+                {
+                    "attempt": attempt + 1,
+                    "reason": f"AI generation failed: {exc}",
+                }
+            )
+            continue
+
 
         valid_plans = []
         rejected_this_attempt = []
