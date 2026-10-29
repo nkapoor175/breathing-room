@@ -76,15 +76,7 @@ def _validate_plan(plan: Plan, venue: Venue) -> None:
             )
 
             matched_entry = entry_lookup.get(entry_key)
-            print(
-                "[ENTRY DEBUG]",
-                f"action_entry={action.entry!r}",
-                f"entry_key={entry_key!r}",
-                f"lookup_keys={list(entry_lookup.keys())!r}",
-                f"matched_entry={matched_entry!r}",
-                f"same_key={entry_key in entry_lookup}",
-            )
-
+        
             if matched_entry is None:
                 raise ValueError(
                     f"Unknown entry: {action.entry!r}. "

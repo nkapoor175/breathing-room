@@ -103,13 +103,7 @@ def call_json(
         choice = resp.choices[0] if resp.choices else None
         message = choice.message if choice else None
         text = (message.content or "").strip() if message else ""
-        if not text:
-            print(
-                f"[LLM DEBUG] role={role}, model={MODELS[role]}, "
-                f"finish_reason={choice.finish_reason if choice else None}, "
-                f"completion_tokens={completion_tokens}"
-            )
-
+        
         if not text:
             finish_reason = choice.finish_reason if choice else "no_choice"
             last_err = (
@@ -119,9 +113,6 @@ def call_json(
             )
         else:
             try:
-                print(f"[LLM DEBUG] role={role}, schema={schema.__name__}")
-                print(f"[LLM DEBUG] response type={type(text).__name__}")
-                print(f"[LLM DEBUG] response preview={text[:1000]!r}")
                 return schema.model_validate_json(text)
             except (ValidationError, ValueError) as exc:
                 last_err = (
