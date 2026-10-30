@@ -13,6 +13,7 @@ Ctrl+C stops everything.
 
 Run:  python scripts/demo.py               (from the repo root, venv active)
       python scripts/demo.py --no-dashboard
+      python scripts/demo.py --real-sense --gateway   (Shirali's counts + the ESP32 gateway)
       FAKE_FILL_S=600 python scripts/demo.py   (slower build-up)
 Refresh the dashboard once after READY (it may have opened before the backend).
 """
@@ -73,6 +74,10 @@ def stop_all():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-dashboard", action="store_true")
+    ap.add_argument("--real-sense", action="store_true",
+                    help="don't start the fake crowd feed (Shirali's sense code publishes br/zone_state)")
+    ap.add_argument("--gateway", action="store_true",
+                    help="also start the serial bridge to the gateway ESP32 (GATEWAY_PORT in .env)")
     ap.add_argument("--dashboard-port", type=int, default=3100)
     args = ap.parse_args()
     LOGS.mkdir(parents=True, exist_ok=True)
@@ -91,9 +96,14 @@ def main():
         wait_http("imagine", "http://localhost:8002/forecast/latest")
         start("backend", [PY, "-m", "uvicorn", "backend.app:app", "--port", str(backend_port)], env)
         wait_http("backend", f"http://localhost:{backend_port}/health")
-        start("sense", [PY, "-m", "sense.fake_sense"], env)
+        if args.real_sense:
+            print("  sense      not started: waiting for real br/zone_state from Sense")
+        else:
+            start("sense", [PY, "-m", "sense.fake_sense"], env)
         start("reports", [PY, "-m", "act.reports"], env)
         start("act", [PY, "-m", "act.run_act"], env)
+        if args.gateway:
+            start("bridge", [PY, "-m", "act.serial_bridge"], env)
         if not args.no_dashboard:
             denv = {**env, "NEXT_PUBLIC_BACKEND_URL": f"http://localhost:{backend_port}",
                     "NEXT_PUBLIC_IMAGINE_URL": "http://127.0.0.1:8002"}

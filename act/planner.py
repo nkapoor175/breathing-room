@@ -54,7 +54,8 @@ def load_venue(log: Callable[[str], None] = print, wait_s: float = 20) -> Venue:
                 log(f"venue: Imagine API has no venue {VENUE_ID!r} ({type(e).__name__}); trying local files")
                 break
             time.sleep(2)
-    for p in (ROOT / "imagine" / "venues" / f"{VENUE_ID}.json", ROOT / "data" / "demo-venue.json"):
+    for p in (ROOT / "imagine" / "venues" / f"{VENUE_ID}.json", ROOT / "imagine" / "venue.json",
+              ROOT / "data" / "demo-venue.json"):
         if p.exists():
             if p.parent.name == "data":
                 log(f"venue: WARNING using the placeholder {p.relative_to(ROOT)}. If Imagine is running "
