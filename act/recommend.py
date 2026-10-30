@@ -252,7 +252,7 @@ def _generate_candidates(
                 purpose="recommend",
                 system=system_prompt,
                 user=json.dumps(prompt_context),
-                response_model=PlanCandidates,
+                schema=PlanCandidates,
             )
         except Exception as exc:
             rejected.append(

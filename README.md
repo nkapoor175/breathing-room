@@ -4,7 +4,9 @@
 
 Breathing Room is a prototype that explores how AI-assisted crowd sensing, venue simulation, and ranked interventions can help identify potentially dangerous crowd conditions before they escalate.
 
-Built for the **Nebius × NVIDIA Global AI Hackathon — Physical AI track**, using NVIDIA Nemotron and Nebius.
+Built for the **Nebius × NVIDIA Global AI Hackathon — Physical AI track**, using NVIDIA Nemotron on Nebius Token Factory, plus Tavily. **Built from scratch during the submission period.**
+
+> Spotting a surge isn't the same as preventing one. Breathing Room reads crowd density, simulates the next 15 minutes 1,000 times, and has an AI planner propose plans that are **tested in the simulation before anything happens**: officers get instructions on Telegram, gate signs change (after a human approves), and calm announcements go out in English, Tamil and Hindi.
 
 The prototype combines crowd-state inputs, a digital venue model, short-horizon forecasts, intervention scoring, and ranked recommendations in a web dashboard.
 
@@ -12,13 +14,22 @@ The prototype combines crowd-state inputs, a digital venue model, short-horizon 
 
 ## Features
 
-- **Venue digital twin:** Represents zones, entry points, and connections between areas.
-- **Crowd forecasting:** Simulates crowd conditions over a 15-minute horizon.
-- **Intervention scoring:** Compares a baseline forecast with proposed actions.
-- **Gate safety validation:** Rejects gate closures that disconnect zones from an outside route.
-- **AI-assisted recommendations:** Generates and ranks candidate intervention plans, with fallback behavior when generation fails.
-- **Web dashboard:** Displays venue information, forecasts, gate interventions, and ranked recommendations.
-- **Backend API:** Provides endpoints for simulation, scoring, recommendations, and application integration.
+**Imagine: venue twin and simulation**
+- **Venue digital twin:** zones, entry points and connections; a draft can be built from a site-plan photo with Nemotron Super VL.
+- **Crowd forecasting:** Monte Carlo simulation of the next 15 minutes (1,000 runs): chance of danger and minutes to danger per zone.
+- **Intervention scoring:** every candidate plan is simulated against "do nothing".
+- **Itaewon backtest:** a clearly labelled *simulated reconstruction* (see `docs/itaewon_backtest.md`).
+
+**Act: decide and act** (`act/`)
+- **Watchdog:** fires when a zone newly reaches ≥30% chance of danger within 15 min, or a serious report comes from a crowded zone. Nemotron Lightning writes the situation summary.
+- **Planner:** Nemotron Ultra proposes 3 plans using only the officers, gates and loudspeakers that exist. Code checks every plan (made-up ids, more officers than exist, gate closures that would trap people, panic words) and a rule-based plan is always added. All are scored in the simulator; the safest wins. About 10 s from danger to a published plan.
+- **Human in the loop:** closing a gate waits for an operator's **Approve** on the dashboard; no answer in 2 min = no change.
+- **Officers and volunteers on Telegram:** instructions with [On my way] / [Arrived] buttons; volunteers report in English, Tamil or Hindi.
+- **Report fusion:** call notes and Telegram messages → zone + severity + English summary.
+- **Announcements in English, Tamil and Hindi:** each translation is checked in code (right script, left/right not flipped, gate numbers kept) before it can be played.
+- **Turnout check with Tavily:** compares likely turnout from the news with the organizer's declared crowd size; every number is checked against its quote.
+
+**Dashboard** (`dashboard/`): `/` live operations view (Act panel: situation, plan card with "safe in X% of futures", officers, announcements, reports, cost per decision, turnout card, approvals) and `/judge` simulation view (venue, forecasts, gate interventions, ranked recommendations).
 
 ## Tech stack
 
@@ -30,6 +41,34 @@ The prototype combines crowd-state inputs, a digital venue model, short-horizon 
 | Messaging | MQTT |
 | Dashboard | Next.js, React, TypeScript |
 | Testing | pytest, ESLint, TypeScript build checks |
+
+## How we use NVIDIA Nemotron, Nebius Token Factory and Tavily
+
+Every model call goes through **Nebius Token Factory** (`https://api.tokenfactory.nebius.com/v1/`) via one helper, `common/llm.py` line 78 (`client.chat.completions.create`), which validates the JSON reply and logs the cost of each call (shown on the dashboard).
+
+| Model (Token Factory) | What it does | Where (file:line) |
+|---|---|---|
+| **Nemotron 3 Ultra** `nvidia/Nemotron-3-Ultra-550b-a55b` | Proposes 3 incident plans | `act/planner.py:304` |
+| **Nemotron 3 Ultra** | Translates announcements to Tamil and Hindi | `act/announce.py:123` |
+| **Nemotron 3.5 Lightning** `nvidia/Nemotron-3_5-Lightning` | Watchdog: situation summary, judges free-text reports | `act/watchdog.py:187` |
+| **Nemotron 3 Super** `nvidia/nemotron-3-super-120b-a12b` | Report fusion (call notes, Telegram) → zone + severity | `act/reports.py:90` |
+| **Nemotron 3 Super** | Extracts crowd numbers from news for the turnout check | `act/turnout.py:222` |
+| **Nemotron 3 Super** | Ranked recommendations on the `/judge` page | `act/recommend.py:250` |
+| **Nemotron 3.5 Super VL** `nvidia/Nemotron-3.5-Super-VL` | Site-plan photo → venue twin (and one correction pass) | `imagine/fake_imagine.py:537`, `:576` |
+| (all models) | Model ID check | `common/check_models.py:8` |
+
+| Other runtime API | What it does | Where |
+|---|---|---|
+| **Tavily** search | 3 news searches per turnout estimate | `act/turnout.py:210` (client created at `:202`) |
+
+**Model routing:** Ultra only where a real decision or a safety-critical translation is needed; Lightning and Super (reasoning off) for frequent short jobs. We switched some jobs away from the planned model after testing: Lightning flipped "left"/"right" in Tamil and turned "thousands" into exact numbers, so translation uses Ultra and number extraction uses Super. Details and numbers: `docs/act-log.md`, tool feedback: `docs/feedback.md`.
+
+## Safety by design
+
+- **The LLM never acts directly.** Every plan is validated in code and simulated before it is carried out, and a simple rule-based plan is always in the running.
+- **Humans approve gate closures.** No answer means no change.
+- **No made-up instructions:** announcements and turnout numbers are checked in code; anything that fails is dropped, not sent.
+- **Privacy:** counts and movement only, no face recognition, raw video never stored.
 
 ## Quick start
 
@@ -91,7 +130,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` in your browser.
+Open `http://localhost:3000` (operations view) and `http://localhost:3000/judge` (simulation view). If Windows has port 3000 reserved, run `npm run dev -- -p 3100` instead. Set `NEXT_PUBLIC_BACKEND_URL` / `NEXT_PUBLIC_IMAGINE_URL` in `dashboard/.env.local` if the backend or the Imagine API run elsewhere.
 
 ### 5. Optional: start the shared backend and publishers
 
@@ -106,8 +145,18 @@ python -m sense.fake_sense
 ```
 
 ```bash
-python -m act.fake_act --every 20
+python -m act.run_act          # Watchdog -> Planner -> executor (+ Telegram bot if TELEGRAM_BOT_TOKEN is set)
 ```
+
+```bash
+python -m act.reports          # call notes from the dashboard -> reports
+```
+
+```bash
+python -m act.turnout --event "TVK Vijay rally" --organizer "TVK (Tamilaga Vettri Kazhagam), leader Vijay" --city Karur --date 2025-09-27 --declared 10000 --before-event --publish
+```
+
+Start the Imagine API (step 3) **before** these, so they load its venue. `python -m act.fake_act --every 20` publishes fake plans instead of running the real planner.
 
 The WebSocket stream is available at `ws://localhost:8000/ws`.
 
@@ -148,7 +197,7 @@ npm run lint
 npm run build
 ```
 
-The backend test suite previously passed **46 tests** in the development environment. Rerun the checks against the current checkout to verify its status.
+157 backend tests pass on the current `main` (Imagine + Act + shared).
 
 ## Repository layout
 
@@ -172,9 +221,13 @@ The backend test suite previously passed **46 tests** in the development environ
 
 The current prototype is intended for research, experimentation, and demonstration—not as a replacement for trained crowd-safety teams or established emergency procedures.
 
-## Team contributions
+## Team
 
-The project is developed collaboratively across sensing, simulation, action planning, firmware, and dashboard workstreams. Refer to the repository history and project documentation for implementation details and individual contributions.
+| Person | Slice | What they built |
+|---|---|---|
+| **Shirali** | Sense | Crowd sensing: cameras, counting, volunteer buttons |
+| **Ananya** | Imagine | Venue twin, crowd simulator, forecasts and scoring, Itaewon backtest, `/judge` view, README |
+| **Navika** | Act | Watchdog, planner, executor, approvals, Telegram bot, report fusion, Tamil/Hindi announcements, Tavily turnout check, operations dashboard, ESP-NOW gateway |
 
 ## License
 

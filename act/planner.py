@@ -33,21 +33,27 @@ LLM_TIMEOUT_S = 40          # leaves time for scoring inside the 60 s target
 ALL_LANGS = ["en", "ta", "hi"]
 MAX_ANNOUNCE_WORDS = 20
 # Words that can cause panic or a rush if heard over a loudspeaker (planner prompt rule).
-PANIC_WORDS = re.compile(r"\b(danger\w*|stampede|crush\w*|panic|emergency|run|running|hurry|"
-                         r"fire|bomb|die|dying|dead|death|evacuate)\b", re.IGNORECASE)
+PANIC_WORDS = re.compile(r"\b(danger\w*|stampede|crush\w*|panic|emergency|run|running|hurry|rush|"
+                         r"immediately|quickly|fire|bomb|die|dying|dead|death|evacuate)\b", re.IGNORECASE)
 
 
 # ---------- inputs ----------
-def load_venue(log: Callable[[str], None] = print) -> Venue:
-    """Imagine API first, then Ananya's venue file, then our demo placeholder.
-    Says where the venue came from, loudly if it is the placeholder."""
-    try:
-        r = httpx.get(f"{IMAGINE}/venue/{VENUE_ID}", timeout=5)
-        r.raise_for_status()
-        log(f"venue: {VENUE_ID} from Imagine API {IMAGINE}")
-        return Venue.model_validate(r.json())
-    except Exception as e:
-        log(f"venue: Imagine API has no venue {VENUE_ID!r} ({type(e).__name__}); trying local files")
+def load_venue(log: Callable[[str], None] = print, wait_s: float = 20) -> Venue:
+    """Imagine API first (waiting up to wait_s for it to start), then Ananya's venue
+    file, then our demo placeholder. Says where the venue came from, loudly if it is
+    the placeholder."""
+    deadline = time.monotonic() + wait_s
+    while True:
+        try:
+            r = httpx.get(f"{IMAGINE}/venue/{VENUE_ID}", timeout=5)
+            r.raise_for_status()
+            log(f"venue: {VENUE_ID} from Imagine API {IMAGINE}")
+            return Venue.model_validate(r.json())
+        except Exception as e:
+            if time.monotonic() >= deadline:
+                log(f"venue: Imagine API has no venue {VENUE_ID!r} ({type(e).__name__}); trying local files")
+                break
+            time.sleep(2)
     for p in (ROOT / "imagine" / "venues" / f"{VENUE_ID}.json", ROOT / "data" / "demo-venue.json"):
         if p.exists():
             if p.parent.name == "data":
