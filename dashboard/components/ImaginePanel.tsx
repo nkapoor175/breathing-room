@@ -18,9 +18,14 @@ export default function ImaginePanel() {
       owner="Ananya"
       badge={forecast && <span>{forecast.runs.toLocaleString()} runs · updated {ago(forecast.receivedAt, now)}</span>}
     >
-      <div className="flex aspect-video items-center justify-center rounded-xl bg-zinc-100 text-sm text-zinc-500 dark:bg-zinc-800">
-        Venue map + fan chart goes here (I08)
-      </div>
+      <a
+        href="/judge"
+        target="_blank"
+        className="flex items-center justify-between rounded-xl bg-zinc-100 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+      >
+        <span>Venue twin, gate what-ifs and ranked plans</span>
+        <span className="font-medium">Open simulation view →</span>
+      </a>
 
       <Section title={`Next ${forecast?.horizon_min ?? 15} minutes`}>
         {!forecast ? (

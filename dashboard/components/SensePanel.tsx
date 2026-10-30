@@ -17,8 +17,9 @@ export default function SensePanel() {
 
   return (
     <Panel title="Sense" owner="Shirali" badge={<span>updated {ago(latest, now)}</span>}>
-      <div className="flex aspect-video items-center justify-center rounded-xl bg-zinc-100 text-sm text-zinc-500 dark:bg-zinc-800">
-        Blurred camera frame + heatmap goes here (S10)
+      <div className="rounded-xl bg-zinc-100 px-4 py-3 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+        Crowd counts per zone, every 2 s.{" "}
+        {rows.some((z) => z.source === "sim") && <span className="font-medium">Simulated crowd feed in this demo.</span>}
       </div>
 
       <Section title="Zones">

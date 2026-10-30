@@ -19,7 +19,8 @@ recently is the best hint of how many will come this time, especially when the o
 declares far fewer. A police "we expected X, but around Y came" gives two sources.
 Convert Indian units: 1 lakh = 100000, 1 crore = 10000000. For a range like
 "20,000 to 25,000" use the higher number. Skip vague words with no number
-("thousands", "a huge crowd"). Skip numbers about unrelated events, deaths, injuries,
+("thousands", "a huge crowd"). Skip venue capacities ("a ground built for 1.5 lakh
+people" is a size, not a crowd count). Skip numbers about unrelated events, deaths, injuries,
 stampedes, police deployed or vehicles. Skip anything describing what happened after
 the event date (pages sometimes contain later headlines).
 note: one sentence on how much the sources agree, plain language.
