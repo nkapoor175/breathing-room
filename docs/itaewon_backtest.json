@@ -1,0 +1,1474 @@
+{
+  "label": "simulated reconstruction",
+  "historical_reference_times": {
+    "first_emergency_call": "18:34",
+    "approximate_crush_time": "22:15"
+  },
+  "scenarios": [
+    {
+      "exit_closed": false,
+      "starting_counts": {
+        "A": 100,
+        "B": 150,
+        "C": 100
+      },
+      "arrival_rate_per_min": 20.0,
+      "first_simulated_alert_time": null,
+      "timeline": [
+        {
+          "time": "17:00",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.132,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.09,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.09,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "17:15",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.134,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.09,
+              "p90_density": 0.129,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.091,
+              "p90_density": 0.129,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "17:30",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.138,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.092,
+              "p90_density": 0.135,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.093,
+              "p90_density": 0.134,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "17:45",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.089,
+              "p90_density": 0.134,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.09,
+              "p90_density": 0.132,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.09,
+              "p90_density": 0.131,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "18:00",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.135,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.09,
+              "p90_density": 0.132,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.091,
+              "p90_density": 0.132,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "18:15",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.09,
+              "p90_density": 0.132,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.129,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.091,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "18:30",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.135,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.092,
+              "p90_density": 0.131,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.093,
+              "p90_density": 0.13,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "18:45",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.09,
+              "p90_density": 0.136,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.133,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.093,
+              "p90_density": 0.133,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "19:00",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.09,
+              "p90_density": 0.134,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.129,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.091,
+              "p90_density": 0.13,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "19:15",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.092,
+              "p90_density": 0.137,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.093,
+              "p90_density": 0.135,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.092,
+              "p90_density": 0.134,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "19:30",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.09,
+              "p90_density": 0.13,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.09,
+              "p90_density": 0.128,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.091,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "19:45",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.092,
+              "p90_density": 0.132,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.092,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.092,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "20:00",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.131,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.128,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.091,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "20:15",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.09,
+              "p90_density": 0.138,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.132,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.091,
+              "p90_density": 0.13,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "20:30",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.092,
+              "p90_density": 0.135,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.13,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.09,
+              "p90_density": 0.129,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "20:45",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.092,
+              "p90_density": 0.134,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.092,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.091,
+              "p90_density": 0.126,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "21:00",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.092,
+              "p90_density": 0.136,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.131,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.091,
+              "p90_density": 0.129,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "21:15",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.132,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.09,
+              "p90_density": 0.128,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.091,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "21:30",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.092,
+              "p90_density": 0.135,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.13,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.092,
+              "p90_density": 0.129,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "21:45",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.09,
+              "p90_density": 0.131,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.089,
+              "p90_density": 0.129,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.09,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "22:00",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.135,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.131,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.092,
+              "p90_density": 0.13,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "22:15",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.09,
+              "p90_density": 0.137,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.13,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.092,
+              "p90_density": 0.131,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "22:30",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.09,
+              "p90_density": 0.131,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.091,
+              "p90_density": 0.13,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.093,
+              "p90_density": 0.13,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "22:45",
+          "worst_zone": "A",
+          "p_danger": 0.0,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.093,
+              "p90_density": 0.139,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.092,
+              "p90_density": 0.134,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 0.092,
+              "p90_density": 0.134,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "exit_closed": true,
+      "starting_counts": {
+        "A": 100,
+        "B": 150,
+        "C": 100
+      },
+      "arrival_rate_per_min": 20.0,
+      "first_simulated_alert_time": "17:15",
+      "timeline": [
+        {
+          "time": "17:00",
+          "worst_zone": "C",
+          "p_danger": 0.01,
+          "minutes_to_danger": null,
+          "alert": false,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.132,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.09,
+              "p90_density": 0.127,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 3.768,
+              "p90_density": 4.352,
+              "p_danger": 0.01,
+              "minutes_to_danger": null
+            }
+          ]
+        },
+        {
+          "time": "17:15",
+          "worst_zone": "C",
+          "p_danger": 0.952,
+          "minutes_to_danger": 10.25,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.134,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.09,
+              "p90_density": 0.129,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 5.559,
+              "p90_density": 6.173,
+              "p_danger": 0.952,
+              "minutes_to_danger": 10.25
+            }
+          ]
+        },
+        {
+          "time": "17:30",
+          "worst_zone": "C",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.138,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.092,
+              "p90_density": 0.135,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 7.388,
+              "p90_density": 8.029,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "17:45",
+          "worst_zone": "C",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.089,
+              "p90_density": 0.134,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 0.254,
+              "p90_density": 0.932,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "18:00",
+          "worst_zone": "C",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.135,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 2.045,
+              "p90_density": 2.693,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "18:15",
+          "worst_zone": "C",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.09,
+              "p90_density": 0.132,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 3.866,
+              "p90_density": 4.439,
+              "p_danger": 0.017,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "18:30",
+          "worst_zone": "C",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.091,
+              "p90_density": 0.135,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 5.694,
+              "p90_density": 6.33,
+              "p_danger": 0.971,
+              "minutes_to_danger": 9.33
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "18:45",
+          "worst_zone": "B",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.09,
+              "p90_density": 0.136,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 7.499,
+              "p90_density": 8.196,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "19:00",
+          "worst_zone": "B",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 0.386,
+              "p90_density": 1.075,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "19:15",
+          "worst_zone": "B",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 2.198,
+              "p90_density": 2.97,
+              "p_danger": 0.0,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "19:30",
+          "worst_zone": "B",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 4.0,
+              "p90_density": 4.636,
+              "p_danger": 0.038,
+              "minutes_to_danger": null
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "19:45",
+          "worst_zone": "B",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 5.802,
+              "p90_density": 6.42,
+              "p_danger": 0.987,
+              "minutes_to_danger": 8.33
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "20:00",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 7.586,
+              "p90_density": 8.284,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "20:15",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "20:30",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "20:45",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "21:00",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "21:15",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "21:30",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "21:45",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "22:00",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "22:15",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "22:30",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        },
+        {
+          "time": "22:45",
+          "worst_zone": "A",
+          "p_danger": 1.0,
+          "minutes_to_danger": 0.0,
+          "alert": true,
+          "zone_forecasts": [
+            {
+              "zone": "A",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "B",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            },
+            {
+              "zone": "C",
+              "p50_density": 9.0,
+              "p90_density": 9.0,
+              "p_danger": 1.0,
+              "minutes_to_danger": 0.0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "note": "Both scenarios are simplified simulations, not validated historical predictions. Closing the exit is a diagnostic assumption, not a claim about actual historical gate status."
+}
