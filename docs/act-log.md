@@ -15,10 +15,31 @@ Newest day at the top. Task IDs refer to spec Section 11.4.
 | A05 | Telegram officer bot | ✅ Done Oct 25 (PR `act/telegram`), tested on a real phone |
 | A06 | Announcements (en/ta/hi) | ✅ Done Oct 25 (PR `act/announce-approve`) · ⏳ native-speaker check |
 | A07 | Tavily turnout estimator | ✅ Done Oct 25 (PR `act/turnout`) |
-| A08 | Gateway, gate sign, serial bridge | Oct 26 |
+| A08 | Gateway, gate sign, serial bridge | 🟡 Code done Oct 30 (bridge tested with a simulated port; sketches not compiled yet) · ⏳ flash boards |
 | A09 | Act dashboard panel | ✅ Built Oct 25 in a forked session (PR #6) |
-| A10 | Devpost write-up + tool feedback | Oct 29 |
+| A10 | Devpost write-up + tool feedback | 🟡 Drafts Oct 30: `docs/devpost.md`, `docs/feedback.md` · ⏳ teammates' Serverless/VL notes |
 | Extra | Operator approval for gate closures | ✅ Done Oct 25 (same PR) · ⏳ team OK on 2 new topics |
+
+---
+
+## Fri Oct 30 (deadline day)
+
+### Done
+- **Repo check (10:00):** `main` green (117 tests). PR #4 (Imagine) conflicted in 14 files and would have broken Act: its `common/llm.py` was rewritten from an old copy without `extra_body`/`NO_THINK` (watchdog, report fusion, turnout crash). It also replaced the merged dashboard and added a second planner (`act/recommend.py`). Shirali not a collaborator, no Sense code in the repo.
+- **Integration branch `integrate/imagine` → PR #11** (merge this instead of #4): all of Ananya's work kept; combined `llm.py` (her retries + empty-reply handling, plus `extra_body`/`NO_THINK`, `max_tokens` default 8192); her simulator page at `/judge`, merged dashboard stays at `/`; Imagine API answers the team `VENUE_ID`; test-upload `active_venue.json` ("Residential Unit") untracked; `pillow` added. `next build` passes with both routes.
+- **First full rehearsal on the real simulator.** Found and fixed: fake Sense sized for the wrong venue (every plan "safe in 0%"), report fusion starting before the simulator (wrong zone), `recommend.py` calling `call_json(response_model=…)` (its AI never ran), Ultra announcing "Exit now…" (more panic words). After the fixes: watchdog "Zone C has a 70% chance of dangerous density…" → 4 plans scored by the simulator → "Hold entry inflow. Safe in 44% of futures".
+- **README:** required model-call table (file:line for every Nemotron and Tavily call), safety by design, Act features, run commands, team section, built-from-scratch line.
+- **Devpost draft** `docs/devpost.md`; **tool feedback** filled for Token Factory, Ultra, Lightning, Super, Tavily.
+- **A08 code:** `act/serial_bridge.py` (buffers button reports while MQTT is down; 4 tests with a simulated serial port), `firmware/gateway/gateway.ino`, `firmware/gate_sign/gate_sign.ino` (4 LEDs). Sketches not compiled (no boards/arduino-cli here).
+- 161 tests pass.
+
+### Decisions
+- Merge #4 through an integration branch rather than asking Ananya to rebase on deadline day.
+- Keep `act/recommend.py` for the `/judge` page for now (team decision pending); fixed its call so it works.
+- Judge Mode hosting: not required for the Physical AI track (demo URL optional); only if time allows after video/README/Devpost.
+
+### Open
+- Merge PR #11; Shirali's Sense code; video; Devpost form; flash the boards.
 
 ---
 
