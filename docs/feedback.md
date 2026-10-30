@@ -12,7 +12,11 @@ For each tool: what we used it for, what worked, what didn't, time from zero to 
 
 ## Nebius Serverless Endpoints
 
+- Planned for the crowd-counting model (spec task S08). Not used in the final build: all model calls run on Token Factory, and crowd counts came from a local pipeline or a simulated feed. Promo credits cover Token Factory only, so an always-on endpoint would have been billed separately on a personal card; we chose not to.
+
 ## Nebius Serverless Jobs
+
+- Planned for the counting benchmark and Nightmare Mode (spec tasks S09, I07). Not used in the final build for the same reason; the simulator and backtest ran locally.
 
 ## Nemotron 3 Ultra
 
@@ -34,6 +38,9 @@ For each tool: what we used it for, what worked, what didn't, time from zero to 
 - Would use again: yes; our default "accurate but cheap" model.
 
 ## Nemotron 3.5 Super VL
+
+- Used for the venue twin: a photo of a site plan → draft venue JSON (zones as polygons, links, entries) with `json_schema` output (`imagine/fake_imagine.py:537`), plus one correction pass when the geometry fails validation (`:576`). Images go in as base64 data URLs in the OpenAI message format.
+- Polygons were rough, as expected; validation (positive areas, at least 3 corners, no duplicate ids, links to known zones) catches bad drafts.
 
 ## Tavily
 

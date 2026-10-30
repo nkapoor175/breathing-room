@@ -3,7 +3,7 @@
 **Track:** Physical AI · **Bonus:** Best Use of Tavily
 
 **Elevator pitch (≤200 chars):**
-AI that stops crowd crushes before they start: it reads crowd video, simulates the next 15 minutes, and moves police, gates and announcements early. Built on NVIDIA Nemotron and Nebius.
+AI that stops crowd crushes before they start: it reads crowd density, simulates the next 15 minutes, and moves police, gates and announcements early. Built on NVIDIA Nemotron and Nebius.
 
 **Built from scratch during the submission period.**
 
@@ -19,7 +19,7 @@ The warnings were there each time. What was missing was turning them into a deci
 
 Breathing Room watches a venue, predicts where it will become dangerous, and acts early:
 
-1. **Sense:** crowd density and movement per zone from any camera, plus "pushing here" / "someone fell" buttons for volunteers that work over an ESP-NOW radio mesh with no phone signal.
+1. **Sense:** people per square metre and movement for each zone, every 2 seconds, from camera counting or any crowd-count feed (the demo also runs on a simulated feed), plus "pushing here" / "someone fell" buttons for volunteers that work over an ESP-NOW radio mesh with no phone signal.
 2. **Imagine:** a digital twin of the venue (a draft can be built from a photo of the site plan) and a simulation of the next 15 minutes, run 1,000 times, giving each zone's chance of danger and minutes to danger.
 3. **Act:** when danger is coming, an AI planner (Nemotron 3 Ultra) proposes three plans using only the officers, gates and loudspeakers that actually exist. **Every plan is tested in the simulation before anything happens**, and a simple rule-based plan is always in the running. Then the safest plan is carried out:
    - officers get instructions on Telegram with "On my way" / "Arrived" buttons,
