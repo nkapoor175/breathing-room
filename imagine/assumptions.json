@@ -1,0 +1,18 @@
+
+{
+  "dt_s": 5,
+  "horizon_min": 15,
+  "runs": 1000,
+  "v_free_mps": 1.0,
+  "rho_jam": 5.4,
+  "rho_physical_max": 9.0,
+  "arrival_multiplier_sigma": 0.25,
+  "danger_density": 5.0,
+  "caution_density": 4.0,
+  "officer_speed_mps": 1.2,
+  "officer_redirect_ppl_per_min": 15,
+  "hold_inflow_compliance": 0.8,
+  "announce_delay_min": 1.0,
+  "announce_outflow_boost_per_min": 0.05,
+  "announce_arrival_cut": 0.2
+}

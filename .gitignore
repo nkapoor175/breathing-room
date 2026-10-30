@@ -45,3 +45,7 @@ act/telegram_registry.json
 
 # Cached Tavily search results
 act/.cache/
+breathing-room-web/
+
+# Venue saved by the twin-from-photo upload (runtime state, not the demo venue)
+imagine/active_venue.json
